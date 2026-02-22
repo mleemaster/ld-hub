@@ -1,0 +1,7 @@
+{
+  "crons": [
+    { "path": "/api/cron/uptime", "schedule": "*/30 * * * *" },
+    { "path": "/api/cron/ssl", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/contact-form", "schedule": "0 */6 * * *" }
+  ]
+}

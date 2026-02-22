@@ -1,0 +1,69 @@
+/*
+ * Global styles and design tokens for LeeMaster Design Hub.
+ * Uses Tailwind v4 CSS-based configuration with @theme inline.
+ * Defines light/dark theme via CSS custom properties toggled
+ * by the .dark class on <html> (controlled by next-themes).
+ * Apple-inspired palette: neutral grays, blue accent.
+ */
+
+@import "tailwindcss";
+
+/* Light theme (default) */
+:root {
+  --surface: #ffffff;
+  --surface-secondary: #f5f5f7;
+  --surface-tertiary: #e8e8ed;
+  --border: #d2d2d7;
+  --border-secondary: #e5e5ea;
+  --text-primary: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #86868b;
+  --accent: #0071e3;
+  --accent-hover: #0077ed;
+  --success: #34c759;
+  --warning: #ff9f0a;
+  --danger: #ff3b30;
+}
+
+/* Dark theme */
+.dark {
+  --surface: #1c1c1e;
+  --surface-secondary: #2c2c2e;
+  --surface-tertiary: #3a3a3c;
+  --border: #38383a;
+  --border-secondary: #48484a;
+  --text-primary: #f5f5f7;
+  --text-secondary: #a1a1a6;
+  --text-tertiary: #86868b;
+  --accent: #2997ff;
+  --accent-hover: #419cff;
+  --success: #30d158;
+  --warning: #ffd60a;
+  --danger: #ff453a;
+}
+
+/* Register custom theme tokens for Tailwind v4 */
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-tertiary: var(--surface-tertiary);
+  --color-border: var(--border);
+  --color-border-secondary: var(--border-secondary);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--surface);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
