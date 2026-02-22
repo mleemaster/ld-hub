@@ -7,6 +7,8 @@ import { connectDB } from "@/lib/db";
 import { Lead } from "@/models/Lead";
 import { Client, type IClient } from "@/models/Client";
 import { Activity } from "@/models/Activity";
+import { OpenClawStatus } from "@/models/OpenClawStatus";
+import { OpenClawActivity } from "@/models/OpenClawActivity";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 
@@ -110,6 +112,34 @@ async function getRecentActivity() {
   }
 }
 
+async function getOpenClawStats() {
+  try {
+    await connectDB();
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const [statusDoc, messagesSentToday, leadsScrapedToday] = await Promise.all([
+      OpenClawStatus.findOne().lean(),
+      OpenClawActivity.countDocuments({
+        type: { $in: ["message_sent", "follow_up_sent"] },
+        createdAt: { $gte: startOfDay },
+      }),
+      OpenClawActivity.countDocuments({
+        type: "lead_scraped",
+        createdAt: { $gte: startOfDay },
+      }),
+    ]);
+
+    const connected = statusDoc
+      ? Date.now() - new Date(statusDoc.lastHeartbeat).getTime() < 15 * 60 * 1000
+      : false;
+
+    return { connected, messagesSentToday, leadsScrapedToday };
+  } catch {
+    return { connected: false, messagesSentToday: 0, leadsScrapedToday: 0 };
+  }
+}
+
 function StatCard({ title, value, subtitle }: { title: string; value: string | number; subtitle?: string }) {
   return (
     <div className="rounded-2xl border border-border bg-surface-secondary p-6">
@@ -127,12 +157,14 @@ export default async function DashboardPage() {
     { mrr, activeCount },
     { followUpsToday, callsToday },
     activities,
+    openClawStats,
   ] = await Promise.all([
     getLeadCounts(),
     getSiteHealthSummary(),
     getMrrAndActiveClients(),
     getNeedsAttention(),
     getRecentActivity(),
+    getOpenClawStats(),
   ]);
 
   return (
@@ -180,23 +212,27 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-surface-secondary p-6">
-          <h3 className="text-sm font-medium text-text-secondary mb-4">OpenClaw Status</h3>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-2 rounded-full bg-text-tertiary" />
-            <span className="text-sm text-text-tertiary">Not connected</span>
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-text-secondary">Messages sent today</span>
-              <span className="text-sm font-medium text-text-primary">--</span>
+        <Link href="/openclaw" className="block">
+          <div className="rounded-2xl border border-border bg-surface-secondary p-6 hover:border-accent/30 transition-colors">
+            <h3 className="text-sm font-medium text-text-secondary mb-4">OpenClaw Status</h3>
+            <div className="flex items-center gap-2 mb-4">
+              <div className={`w-2 h-2 rounded-full ${openClawStats.connected ? "bg-success" : "bg-text-tertiary"}`} />
+              <span className={`text-sm ${openClawStats.connected ? "text-success" : "text-text-tertiary"}`}>
+                {openClawStats.connected ? "Connected" : "Not connected"}
+              </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-text-secondary">Leads scraped today</span>
-              <span className="text-sm font-medium text-text-primary">--</span>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-text-secondary">Messages sent today</span>
+                <span className="text-sm font-medium text-text-primary">{openClawStats.messagesSentToday}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-text-secondary">Leads scraped today</span>
+                <span className="text-sm font-medium text-text-primary">{openClawStats.leadsScrapedToday}</span>
+              </div>
             </div>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Site Health card */}

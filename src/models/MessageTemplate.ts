@@ -4,16 +4,10 @@
  * that get interpolated at send time. Editable in the hub UI.
  */
 import mongoose, { Schema, type Document, type Model } from "mongoose";
+import { TEMPLATE_TYPES, type TemplateType } from "@/lib/openclaw-constants";
 
-export const TEMPLATE_TYPES = [
-  "initial_contact",
-  "follow_up_1",
-  "follow_up_2",
-  "follow_up_3",
-  "custom",
-] as const;
-
-export type TemplateType = (typeof TEMPLATE_TYPES)[number];
+export { TEMPLATE_TYPES };
+export type { TemplateType };
 
 export interface IMessageTemplate extends Document {
   name: string;

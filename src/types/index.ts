@@ -20,3 +20,8 @@ export { EXPENSE_TYPES, EXPENSE_CATEGORIES } from "@/models/Expense";
 
 export type { IActivity, ActivityType } from "@/models/Activity";
 export { ACTIVITY_TYPES } from "@/models/Activity";
+
+export type { IOpenClawTask, TaskStatus } from "@/models/OpenClawTask";
+export { TASK_STATUSES } from "@/models/OpenClawTask";
+
+export type { IOpenClawStatus } from "@/models/OpenClawStatus";
