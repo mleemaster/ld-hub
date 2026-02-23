@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Lead } from "@/models/Lead";
 import { Activity } from "@/models/Activity";
+import { OpenClawActivity } from "@/models/OpenClawActivity";
 
 export async function GET(
   _request: NextRequest,
@@ -65,6 +66,11 @@ export async function PUT(
           description: `Contacted ${existing.name}`,
           relatedEntityType: "lead",
           relatedEntityId: existing._id,
+        });
+        await OpenClawActivity.create({
+          type: "message_sent",
+          details: `Message sent to ${existing.name}`,
+          relatedLeadId: existing._id,
         });
       }
     } catch {
