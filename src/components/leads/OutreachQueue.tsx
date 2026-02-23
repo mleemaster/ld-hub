@@ -22,6 +22,7 @@ interface OutreachQueueProps {
   leads: Lead[];
   onLeadClick: (lead: Lead) => void;
   onMarkContacted: (leadId: string) => void;
+  onSendMessage: (lead: Lead) => void;
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: (ids: string[]) => void;
@@ -91,7 +92,7 @@ function PhoneActions({ phone }: { phone?: string }) {
   );
 }
 
-export default function OutreachQueue({ leads, onLeadClick, onMarkContacted, selectedIds, onToggleSelect, onToggleSelectAll }: OutreachQueueProps) {
+export default function OutreachQueue({ leads, onLeadClick, onMarkContacted, onSendMessage, selectedIds, onToggleSelect, onToggleSelectAll }: OutreachQueueProps) {
   if (leads.length === 0) {
     return (
       <div className="rounded-2xl border border-border bg-surface-secondary overflow-hidden">
@@ -164,15 +165,31 @@ export default function OutreachQueue({ leads, onLeadClick, onMarkContacted, sel
                   <span className="text-text-tertiary">{formatDate(lead.createdAt)}</span>
                 </TableCell>
                 <TableCell>
-                  <Button
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onMarkContacted(lead._id);
-                    }}
-                  >
-                    Mark Contacted
-                  </Button>
+                  <span className="flex items-center gap-2">
+                    {lead.phone && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSendMessage(lead);
+                        }}
+                        title="Send iMessage"
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-border bg-surface-secondary hover:bg-surface-tertiary text-text-secondary hover:text-accent transition-colors cursor-pointer"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                        </svg>
+                      </button>
+                    )}
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMarkContacted(lead._id);
+                      }}
+                    >
+                      Mark Contacted
+                    </Button>
+                  </span>
                 </TableCell>
               </TableRow>
             ))}
@@ -209,15 +226,31 @@ export default function OutreachQueue({ leads, onLeadClick, onMarkContacted, sel
                   )}
                 </div>
               </div>
-              <Button
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onMarkContacted(lead._id);
-                }}
-              >
-                Contact
-              </Button>
+              <span className="flex items-center gap-1.5">
+                {lead.phone && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSendMessage(lead);
+                    }}
+                    title="Send iMessage"
+                    className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-border bg-surface-secondary hover:bg-surface-tertiary text-text-secondary hover:text-accent transition-colors cursor-pointer"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                    </svg>
+                  </button>
+                )}
+                <Button
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMarkContacted(lead._id);
+                  }}
+                >
+                  Contact
+                </Button>
+              </span>
             </div>
             <div className="flex items-center justify-between text-xs text-text-tertiary mt-1">
               <PhoneActions phone={lead.phone} />

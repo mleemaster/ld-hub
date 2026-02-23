@@ -19,6 +19,7 @@ import LeadTable from "@/components/leads/LeadTable";
 import LeadDetailPanel from "@/components/leads/LeadDetailPanel";
 import KanbanBoard from "@/components/leads/KanbanBoard";
 import OutreachQueue from "@/components/leads/OutreachQueue";
+import SendMessageModal from "@/components/leads/SendMessageModal";
 import LeadImportModal from "@/components/leads/LeadImportModal";
 import ClientForm from "@/components/clients/ClientForm";
 import type { ClientFormData } from "@/lib/client-types";
@@ -50,6 +51,7 @@ export default function LeadsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmingBulkDelete, setConfirmingBulkDelete] = useState(false);
   const [industryFilterOptions, setIndustryFilterOptions] = useState([{ value: "", label: "All Industries" }]);
+  const [messagingLead, setMessagingLead] = useState<Lead | null>(null);
   const [convertingLead, setConvertingLead] = useState<Lead | null>(null);
   const [paymentLinkLead, setPaymentLinkLead] = useState<Lead | null>(null);
   const [paymentLinkPlan, setPaymentLinkPlan] = useState("");
@@ -631,6 +633,7 @@ export default function LeadsPage() {
           leads={queueLeads}
           onLeadClick={(lead) => { setOpenInEditMode(false); setSelectedLead(lead); }}
           onMarkContacted={handleMarkContacted}
+          onSendMessage={(lead) => setMessagingLead(lead)}
           selectedIds={selectedIds}
           onToggleSelect={toggleSelected}
           onToggleSelectAll={toggleSelectAll}
@@ -693,6 +696,16 @@ export default function LeadsPage() {
         onClose={() => setShowImportModal(false)}
         onImported={fetchLeads}
       />
+
+      {/* Send iMessage Modal */}
+      {messagingLead && (
+        <SendMessageModal
+          open={!!messagingLead}
+          onClose={() => setMessagingLead(null)}
+          lead={messagingLead}
+          onSent={() => handleMarkContacted(messagingLead._id)}
+        />
+      )}
 
       {/* Lead Detail Slide-Over */}
       <SlideOver
