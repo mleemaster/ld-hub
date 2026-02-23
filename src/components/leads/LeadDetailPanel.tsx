@@ -12,11 +12,12 @@ import Button from "@/components/ui/Button";
 import LeadForm, { type LeadFormData } from "@/components/leads/LeadForm";
 import { STATUS_OPTIONS } from "@/lib/lead-utils";
 import type { Lead, ActivityRecord } from "@/lib/lead-types";
-import { parseLocalDate } from "@/lib/utils";
+import { cn, parseLocalDate } from "@/lib/utils";
 
 interface LeadDetailPanelProps {
   lead: Lead;
   onStatusChange: (leadId: string, newStatus: string) => void;
+  onToggleHot?: (leadId: string, isHot: boolean) => void;
   onUpdate: (data: LeadFormData) => void;
   onDelete: () => void;
   onConvertToClient?: () => void;
@@ -55,6 +56,7 @@ const ACTIVITY_ICONS: Record<string, string> = {
 export default function LeadDetailPanel({
   lead,
   onStatusChange,
+  onToggleHot,
   onUpdate,
   onDelete,
   onConvertToClient,
@@ -123,6 +125,31 @@ export default function LeadDetailPanel({
         value={lead.status}
         onChange={(v) => handleStatusChange(v)}
       />
+
+      {/* Hot lead toggle — only for Warm / Call Scheduled */}
+      {onToggleHot && (lead.status === "Warm" || lead.status === "Call Scheduled") && (
+        <button
+          type="button"
+          onClick={() => onToggleHot(lead._id, !lead.isHot)}
+          className={cn(
+            "w-full flex items-center justify-between px-3 py-2 rounded-xl border text-sm font-medium transition-colors cursor-pointer",
+            lead.isHot
+              ? "border-red-500/40 bg-red-500/10 text-red-400"
+              : "border-border bg-surface-secondary text-text-secondary hover:text-text-primary"
+          )}
+        >
+          <span className="flex items-center gap-2">
+            <span
+              className={cn(
+                "w-2 h-2 rounded-full",
+                lead.isHot ? "bg-red-500 animate-pulse" : "bg-text-tertiary"
+              )}
+            />
+            Hot Lead
+          </span>
+          <span className="text-xs">{lead.isHot ? "ON" : "OFF"}</span>
+        </button>
+      )}
 
       {/* Info grid */}
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">

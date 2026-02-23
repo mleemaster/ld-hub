@@ -19,6 +19,7 @@ export interface Lead {
   state?: string;
   notes?: string;
   lastContactedDate?: string;
+  isHot?: boolean;
   intakeForm?: IntakeForm;
   createdAt: string;
   updatedAt: string;

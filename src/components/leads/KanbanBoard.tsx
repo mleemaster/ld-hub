@@ -65,6 +65,7 @@ function KanbanCard({ lead, onClick, onEdit, isOverlay }: KanbanCardProps) {
   });
 
   const attention = isNeedingAttention(lead);
+  const hot = !!lead.isHot;
 
   return (
     <div
@@ -77,14 +78,21 @@ function KanbanCard({ lead, onClick, onEdit, isOverlay }: KanbanCardProps) {
         }
       }}
       className={cn(
-        "group rounded-xl border border-border bg-surface p-3 cursor-grab active:cursor-grabbing transition-opacity select-none",
+        "group rounded-xl border bg-surface p-3 cursor-grab active:cursor-grabbing transition-opacity select-none",
         isDragging && !isOverlay && "opacity-50",
         isOverlay && "shadow-lg ring-2 ring-accent/30",
-        attention && "border-l-2 border-l-warning"
+        hot
+          ? "border-red-500/60"
+          : attention
+            ? "border-l-2 border-l-warning border-border"
+            : "border-border"
       )}
     >
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-text-primary truncate">{lead.name}</p>
+        <p className="text-sm font-medium text-text-primary truncate flex items-center gap-1.5">
+          {hot && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />}
+          {lead.name}
+        </p>
         {onEdit && (
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(); }}

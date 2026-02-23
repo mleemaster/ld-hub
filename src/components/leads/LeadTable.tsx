@@ -147,13 +147,16 @@ export default function LeadTable({ leads, onRowClick, onEditClick, selectedIds,
           <TableBody>
             {leads.map((lead) => {
               const attention = isNeedingAttention(lead);
+              const hot = !!lead.isHot;
               return (
                 <TableRow
                   key={lead._id}
                   onClick={() => onRowClick(lead)}
                   className={cn(
                     "cursor-pointer",
-                    attention && "border-l-2 border-l-warning",
+                    hot
+                      ? "border-l-2 border-l-red-500"
+                      : attention && "border-l-2 border-l-warning",
                     selectedIds.has(lead._id) && "bg-accent/5"
                   )}
                 >
@@ -168,7 +171,10 @@ export default function LeadTable({ leads, onRowClick, onEditClick, selectedIds,
                   </TableCell>
                   <TableCell>
                     <div>
-                      <span className="font-medium">{lead.name}</span>
+                      <span className="font-medium flex items-center gap-1.5">
+                        {hot && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />}
+                        {lead.name}
+                      </span>
                       {lead.businessName && (
                         <span className="block text-xs text-text-tertiary">
                           {lead.businessName}
@@ -228,13 +234,16 @@ export default function LeadTable({ leads, onRowClick, onEditClick, selectedIds,
       <div className="md:hidden space-y-3">
         {leads.map((lead) => {
           const attention = isNeedingAttention(lead);
+          const hot = !!lead.isHot;
           return (
             <div
               key={lead._id}
               onClick={() => onRowClick(lead)}
               className={cn(
                 "rounded-2xl border border-border bg-surface-secondary p-4 cursor-pointer active:bg-surface-tertiary transition-colors",
-                attention && "border-l-2 border-l-warning",
+                hot
+                  ? "border-l-2 border-l-red-500"
+                  : attention && "border-l-2 border-l-warning",
                 selectedIds.has(lead._id) && "bg-accent/5 border-accent/30"
               )}
             >
@@ -247,7 +256,10 @@ export default function LeadTable({ leads, onRowClick, onEditClick, selectedIds,
                     onClick={(e) => e.stopPropagation()}
                     className="w-4 h-4 rounded border-border text-accent cursor-pointer"
                   />
-                  <span className="font-medium text-text-primary text-sm">{lead.name}</span>
+                  <span className="font-medium text-text-primary text-sm flex items-center gap-1.5">
+                    {hot && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />}
+                    {lead.name}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1">
                   <EditButton onClick={(e) => { e.stopPropagation(); onEditClick(lead); }} />

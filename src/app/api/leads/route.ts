@@ -72,7 +72,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "No update fields provided" }, { status: 400 });
     }
 
-    const allowed = ["status", "lastContactedDate", "source", "industry"];
+    const allowed = ["status", "lastContactedDate", "source", "industry", "isHot"];
     const safeUpdate: Record<string, string> = {};
     for (const key of allowed) {
       if (update[key] !== undefined) safeUpdate[key] = update[key];

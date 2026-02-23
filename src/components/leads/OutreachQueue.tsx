@@ -146,7 +146,7 @@ export default function OutreachQueue({ leads, onLeadClick, onMarkContacted, onS
                 </TableCell>
                 <TableCell>
                   <span className="font-medium">
-                    {lead.businessName || "—"}
+                    {lead.businessName || lead.name || "—"}
                   </span>
                 </TableCell>
                 <TableCell>

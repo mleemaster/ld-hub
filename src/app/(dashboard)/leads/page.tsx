@@ -128,6 +128,9 @@ export default function LeadsPage() {
   const pipelineLeads = [...allFiltered]
     .filter((l) => l.status !== "New")
     .sort((a, b) => {
+      const aHot = a.isHot ? 1 : 0;
+      const bHot = b.isHot ? 1 : 0;
+      if (bHot !== aHot) return bHot - aHot;
       const aAttention = isNeedingAttention(a) ? 1 : 0;
       const bAttention = isNeedingAttention(b) ? 1 : 0;
       if (bAttention !== aAttention) return bAttention - aAttention;
@@ -198,19 +201,51 @@ export default function LeadsPage() {
   }
 
   async function handleStatusChange(leadId: string, newStatus: string) {
+    const clearHot = newStatus !== "Warm" && newStatus !== "Call Scheduled";
     const prev = leads.map((l) => ({ ...l }));
     setLeads((current) =>
-      current.map((l) => (l._id === leadId ? { ...l, status: newStatus } : l))
+      current.map((l) => (l._id === leadId ? { ...l, status: newStatus, ...(clearHot && { isHot: false }) } : l))
     );
     setSelectedLead((current) =>
-      current && current._id === leadId ? { ...current, status: newStatus } : current
+      current && current._id === leadId ? { ...current, status: newStatus, ...(clearHot && { isHot: false }) } : current
+    );
+
+    const body: Record<string, unknown> = { status: newStatus };
+    if (clearHot) body.isHot = false;
+
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        setLeads(prev);
+        setSelectedLead((current) => {
+          if (!current) return null;
+          const reverted = prev.find((l) => l._id === current._id);
+          return reverted || current;
+        });
+      }
+    } catch {
+      setLeads(prev);
+    }
+  }
+
+  async function handleToggleHot(leadId: string, isHot: boolean) {
+    const prev = leads.map((l) => ({ ...l }));
+    setLeads((current) =>
+      current.map((l) => (l._id === leadId ? { ...l, isHot } : l))
+    );
+    setSelectedLead((current) =>
+      current && current._id === leadId ? { ...current, isHot } : current
     );
 
     try {
       const res = await fetch(`/api/leads/${leadId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ isHot }),
       });
       if (!res.ok) {
         setLeads(prev);
@@ -717,6 +752,7 @@ export default function LeadsPage() {
           <LeadDetailPanel
             lead={selectedLead}
             onStatusChange={handleStatusChange}
+            onToggleHot={handleToggleHot}
             onUpdate={handleUpdateLead}
             onDelete={handleDeleteLead}
             onConvertToClient={() => setConvertingLead(selectedLead)}

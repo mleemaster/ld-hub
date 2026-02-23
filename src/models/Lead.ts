@@ -29,6 +29,7 @@ export interface ILead extends Document {
   state?: string;
   notes?: string;
   lastContactedDate?: Date;
+  isHot?: boolean;
   intakeForm?: IIntakeForm;
   createdAt: Date;
   updatedAt: Date;
@@ -54,6 +55,7 @@ const LeadSchema = new Schema<ILead>(
     state: String,
     notes: String,
     lastContactedDate: Date,
+    isHot: Boolean,
     intakeForm: IntakeFormSchema,
   },
   { timestamps: true }
