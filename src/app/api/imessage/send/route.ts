@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     return await new Promise<NextResponse>((resolve) => {
-      execFile("imsg", ["send", "--to", phone, "--text", message], async (error, stdout, stderr) => {
+      execFile("/opt/homebrew/bin/imsg", ["send", "--to", phone, "--text", message], async (error, stdout, stderr) => {
         if (error) {
           resolve(
             NextResponse.json(
