@@ -22,7 +22,8 @@ export async function POST(request: NextRequest) {
     }
 
     return await new Promise<NextResponse>((resolve) => {
-      execFile("/opt/homebrew/bin/imsg", ["send", "--to", phone, "--text", message], async (error, stdout, stderr) => {
+      const formattedPhone = phone.startsWith("+1") ? phone : `+1${phone.replace(/\D/g, "")}`;
+      execFile("/opt/homebrew/bin/imsg", ["send", "--to", formattedPhone, "--text", message], async (error, stdout, stderr) => {
         if (error) {
           resolve(
             NextResponse.json(
