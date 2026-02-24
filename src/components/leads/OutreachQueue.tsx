@@ -26,6 +26,7 @@ interface OutreachQueueProps {
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: (ids: string[]) => void;
+  filtersActive?: boolean;
 }
 
 function SelectAllCheckbox({ leads, selectedIds, onToggleSelectAll }: {
@@ -92,14 +93,16 @@ function PhoneActions({ phone }: { phone?: string }) {
   );
 }
 
-export default function OutreachQueue({ leads, onLeadClick, onMarkContacted, onSendMessage, selectedIds, onToggleSelect, onToggleSelectAll }: OutreachQueueProps) {
+export default function OutreachQueue({ leads, onLeadClick, onMarkContacted, onSendMessage, selectedIds, onToggleSelect, onToggleSelectAll, filtersActive }: OutreachQueueProps) {
   if (leads.length === 0) {
     return (
       <div className="rounded-2xl border border-border bg-surface-secondary overflow-hidden">
         <div className="p-12 text-center">
-          <p className="text-text-tertiary text-sm">No leads in the queue</p>
+          <p className="text-text-tertiary text-sm">
+            {filtersActive ? "No leads match your filters" : "No leads in the queue"}
+          </p>
           <p className="text-text-tertiary text-xs mt-1">
-            New leads from OpenClaw will appear here
+            {filtersActive ? "Try adjusting your search or filters" : "New leads from OpenClaw will appear here"}
           </p>
         </div>
       </div>

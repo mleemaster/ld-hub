@@ -30,6 +30,7 @@ import DatePicker from "@/components/ui/DatePicker";
 import {
   PIPELINE_STATUS_FILTER_OPTIONS,
   SOURCE_FILTER_OPTIONS,
+  STATE_FILTER_OPTIONS,
   STATUS_OPTIONS,
   SOURCE_OPTIONS,
   searchLeads,
@@ -63,6 +64,7 @@ export default function LeadsPage() {
   const [showToolsMenu, setShowToolsMenu] = useState(false);
   const toolsRef = useRef<HTMLDivElement>(null);
   const [templateFilterOptions, setTemplateFilterOptions] = useState<{ value: string; label: string; name: string }[]>([]);
+  const [queueStateFilter, setQueueStateFilter] = useState("");
   const [showDuplicatesModal, setShowDuplicatesModal] = useState(false);
   const [duplicatesLoading, setDuplicatesLoading] = useState(false);
   const [duplicateGroups, setDuplicateGroups] = useState<
@@ -138,6 +140,7 @@ export default function LeadsPage() {
   const allFiltered = searchLeads(leads, search);
   const queueLeads = [...allFiltered]
     .filter((l) => l.status === "New")
+    .filter((l) => !queueStateFilter || l.state === queueStateFilter)
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   const pipelineLeads = [...allFiltered]
@@ -647,6 +650,17 @@ export default function LeadsPage() {
         </div>
       )}
 
+      {/* Filters — queue only */}
+      {activeTab === "queue" && (
+        <div className="grid grid-cols-3 gap-3">
+          <Select
+            options={STATE_FILTER_OPTIONS}
+            value={queueStateFilter}
+            onChange={setQueueStateFilter}
+          />
+        </div>
+      )}
+
       {/* Selection toolbar */}
       {selectedIds.size > 0 && (
         <div className="rounded-xl border border-accent/30 bg-accent/5 px-4 py-2.5 space-y-2.5">
@@ -735,6 +749,7 @@ export default function LeadsPage() {
           selectedIds={selectedIds}
           onToggleSelect={toggleSelected}
           onToggleSelectAll={toggleSelectAll}
+          filtersActive={!!search || !!queueStateFilter}
         />
       ) : currentLeads.length === 0 ? (
         <div className="rounded-2xl border border-border bg-surface-secondary overflow-hidden">
