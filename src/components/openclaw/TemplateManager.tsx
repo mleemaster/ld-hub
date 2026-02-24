@@ -172,13 +172,37 @@ export default function TemplateManager() {
                 <p className="text-xs text-text-tertiary line-clamp-2">
                   {template.content}
                 </p>
-                {stats[template._id] && (
-                  <p className="text-xs text-text-tertiary mt-1">
-                    {stats[template._id].sent} sent · {stats[template._id].responded} responded
-                    {stats[template._id].sent > 0 && (
-                      <> ({Math.round((stats[template._id].responded / stats[template._id].sent) * 100)}%)</>
-                    )}
-                  </p>
+                {stats[template._id] && stats[template._id].sent > 0 ? (
+                  <div className="mt-2">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-tertiary">
+                        <span className="text-sm font-medium text-text-primary">{stats[template._id].sent}</span>
+                        <span className="text-xs text-text-tertiary">sent</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-tertiary">
+                        <span className="text-sm font-medium text-text-primary">{stats[template._id].responded}</span>
+                        <span className="text-xs text-text-tertiary">responded</span>
+                      </span>
+                      {(() => {
+                        const rate = Math.round((stats[template._id].responded / stats[template._id].sent) * 100);
+                        const color = rate >= 40 ? "bg-success/10 text-success" : rate >= 15 ? "bg-warning/10 text-warning" : "bg-surface-tertiary text-text-tertiary";
+                        return (
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${color}`}>
+                            <span className="text-sm font-medium">{rate}%</span>
+                            <span className="text-xs">rate</span>
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    <div className="mt-1.5 h-1.5 rounded-full bg-surface-tertiary overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-accent transition-all"
+                        style={{ width: `${Math.min(Math.round((stats[template._id].responded / stats[template._id].sent) * 100), 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-text-tertiary mt-2">No sends yet</p>
                 )}
               </div>
 
