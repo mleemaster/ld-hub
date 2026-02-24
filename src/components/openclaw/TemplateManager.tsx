@@ -40,12 +40,19 @@ function formatType(type: string): string {
     .join(" ");
 }
 
+interface TemplateStat {
+  templateId: string;
+  sent: number;
+  responded: number;
+}
+
 export default function TemplateManager() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [stats, setStats] = useState<Record<string, TemplateStat>>({});
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -59,9 +66,26 @@ export default function TemplateManager() {
     }
   }, []);
 
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/openclaw/templates/stats");
+      if (res.ok) {
+        const data = await res.json();
+        const map: Record<string, TemplateStat> = {};
+        for (const s of data.stats) {
+          map[s.templateId] = s;
+        }
+        setStats(map);
+      }
+    } catch {
+      // silently fail
+    }
+  }, []);
+
   useEffect(() => {
     fetchTemplates();
-  }, [fetchTemplates]);
+    fetchStats();
+  }, [fetchTemplates, fetchStats]);
 
   async function handleCreate(data: {
     name: string;
@@ -75,6 +99,7 @@ export default function TemplateManager() {
       body: JSON.stringify(data),
     });
     await fetchTemplates();
+    await fetchStats();
   }
 
   async function handleEdit(data: {
@@ -147,6 +172,14 @@ export default function TemplateManager() {
                 <p className="text-xs text-text-tertiary line-clamp-2">
                   {template.content}
                 </p>
+                {stats[template._id] && (
+                  <p className="text-xs text-text-tertiary mt-1">
+                    {stats[template._id].sent} sent · {stats[template._id].responded} responded
+                    {stats[template._id].sent > 0 && (
+                      <> ({Math.round((stats[template._id].responded / stats[template._id].sent) * 100)}%)</>
+                    )}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center gap-2 shrink-0">

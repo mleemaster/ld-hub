@@ -21,7 +21,7 @@ import { cn, parseLocalDate } from "@/lib/utils";
 interface OutreachQueueProps {
   leads: Lead[];
   onLeadClick: (lead: Lead) => void;
-  onMarkContacted: (leadId: string) => void;
+  onMarkContacted: (lead: Lead) => void;
   onSendMessage: (lead: Lead) => void;
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
@@ -184,7 +184,7 @@ export default function OutreachQueue({ leads, onLeadClick, onMarkContacted, onS
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onMarkContacted(lead._id);
+                        onMarkContacted(lead);
                       }}
                     >
                       Mark Contacted
@@ -245,7 +245,7 @@ export default function OutreachQueue({ leads, onLeadClick, onMarkContacted, onS
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onMarkContacted(lead._id);
+                    onMarkContacted(lead);
                   }}
                 >
                   Contact

@@ -14,10 +14,17 @@ import { STATUS_OPTIONS } from "@/lib/lead-utils";
 import type { Lead, ActivityRecord } from "@/lib/lead-types";
 import { cn, parseLocalDate } from "@/lib/utils";
 
+interface TemplateOption {
+  _id: string;
+  name: string;
+  active: boolean;
+}
+
 interface LeadDetailPanelProps {
   lead: Lead;
   onStatusChange: (leadId: string, newStatus: string) => void;
   onToggleHot?: (leadId: string, isHot: boolean) => void;
+  onTemplateChange?: (leadId: string, templateId: string, templateName: string) => void;
   onUpdate: (data: LeadFormData) => void;
   onDelete: () => void;
   onConvertToClient?: () => void;
@@ -57,6 +64,7 @@ export default function LeadDetailPanel({
   lead,
   onStatusChange,
   onToggleHot,
+  onTemplateChange,
   onUpdate,
   onDelete,
   onConvertToClient,
@@ -67,6 +75,7 @@ export default function LeadDetailPanel({
   const [editing, setEditing] = useState(initialEditing);
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [loadingActivities, setLoadingActivities] = useState(true);
+  const [templateOptions, setTemplateOptions] = useState<TemplateOption[]>([]);
 
   useEffect(() => {
     setEditing(initialEditing);
@@ -92,6 +101,27 @@ export default function LeadDetailPanel({
   useEffect(() => {
     fetchActivities();
   }, [fetchActivities]);
+
+  useEffect(() => {
+    if (lead.status === "New" || !onTemplateChange) return;
+    fetch("/api/openclaw/templates")
+      .then((r) => r.json())
+      .then((data) => {
+        const active = (Array.isArray(data) ? data : []).filter((t: TemplateOption) => t.active);
+        setTemplateOptions(active);
+      })
+      .catch(() => {});
+  }, [lead.status, onTemplateChange]);
+
+  function handleTemplateSelect(templateId: string) {
+    if (!onTemplateChange) return;
+    if (!templateId) {
+      onTemplateChange(lead._id, "", "");
+      return;
+    }
+    const tpl = templateOptions.find((t) => t._id === templateId);
+    if (tpl) onTemplateChange(lead._id, tpl._id, tpl.name);
+  }
 
   function handleStatusChange(newStatus: string) {
     onStatusChange(lead._id, newStatus);
@@ -216,6 +246,28 @@ export default function LeadDetailPanel({
           <dt className="text-xs font-medium text-text-tertiary uppercase tracking-wider">Source</dt>
           <dd className="text-sm text-text-primary mt-0.5">{lead.source || "—"}</dd>
         </div>
+
+        {/* Template (only for contacted leads) */}
+        {lead.status !== "New" && (
+          <div>
+            {onTemplateChange && templateOptions.length > 0 ? (
+              <Select
+                label="Template"
+                options={[
+                  { value: "", label: "None" },
+                  ...templateOptions.map((t) => ({ value: t._id, label: t.name })),
+                ]}
+                value={lead.outreachTemplateId || ""}
+                onChange={handleTemplateSelect}
+              />
+            ) : (
+              <>
+                <dt className="text-xs font-medium text-text-tertiary uppercase tracking-wider">Template</dt>
+                <dd className="text-sm text-text-primary mt-0.5">{lead.outreachTemplateName || "—"}</dd>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Industry */}
         <div>

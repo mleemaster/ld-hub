@@ -24,7 +24,7 @@ interface SendMessageModalProps {
   open: boolean;
   onClose: () => void;
   lead: Lead;
-  onSent: () => void;
+  onSent: (templateId?: string, templateName?: string) => void;
 }
 
 const PLACEHOLDER_MAP: Record<string, keyof Lead> = {
@@ -106,7 +106,8 @@ export default function SendMessageModal({ open, onClose, lead, onSent }: SendMe
       const data = await res.json();
       if (res.ok && data.success) {
         setResult({ type: "success", text: "Message sent!" });
-        onSent();
+        const tpl = templates.find((t) => t._id === selectedTemplateId);
+        onSent(tpl?._id, tpl?.name);
       } else {
         setResult({ type: "error", text: data.error || "Failed to send message" });
       }

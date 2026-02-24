@@ -20,6 +20,8 @@ export interface Lead {
   notes?: string;
   lastContactedDate?: string;
   isHot?: boolean;
+  outreachTemplateId?: string;
+  outreachTemplateName?: string;
   intakeForm?: IntakeForm;
   createdAt: string;
   updatedAt: string;

@@ -30,6 +30,8 @@ export interface ILead extends Document {
   notes?: string;
   lastContactedDate?: Date;
   isHot?: boolean;
+  outreachTemplateId?: string;
+  outreachTemplateName?: string;
   intakeForm?: IIntakeForm;
   createdAt: Date;
   updatedAt: Date;
@@ -56,6 +58,8 @@ const LeadSchema = new Schema<ILead>(
     notes: String,
     lastContactedDate: Date,
     isHot: Boolean,
+    outreachTemplateId: String,
+    outreachTemplateName: String,
     intakeForm: IntakeFormSchema,
   },
   { timestamps: true }

@@ -20,6 +20,7 @@ import LeadDetailPanel from "@/components/leads/LeadDetailPanel";
 import KanbanBoard from "@/components/leads/KanbanBoard";
 import OutreachQueue from "@/components/leads/OutreachQueue";
 import SendMessageModal from "@/components/leads/SendMessageModal";
+import MarkContactedModal from "@/components/leads/MarkContactedModal";
 import LeadImportModal from "@/components/leads/LeadImportModal";
 import ClientForm from "@/components/clients/ClientForm";
 import type { ClientFormData } from "@/lib/client-types";
@@ -52,6 +53,7 @@ export default function LeadsPage() {
   const [confirmingBulkDelete, setConfirmingBulkDelete] = useState(false);
   const [industryFilterOptions, setIndustryFilterOptions] = useState([{ value: "", label: "All Industries" }]);
   const [messagingLead, setMessagingLead] = useState<Lead | null>(null);
+  const [markingContactedLead, setMarkingContactedLead] = useState<Lead | null>(null);
   const [convertingLead, setConvertingLead] = useState<Lead | null>(null);
   const [paymentLinkLead, setPaymentLinkLead] = useState<Lead | null>(null);
   const [paymentLinkPlan, setPaymentLinkPlan] = useState("");
@@ -60,6 +62,7 @@ export default function LeadsPage() {
   const [addLeadError, setAddLeadError] = useState<string | null>(null);
   const [showToolsMenu, setShowToolsMenu] = useState(false);
   const toolsRef = useRef<HTMLDivElement>(null);
+  const [templateFilterOptions, setTemplateFilterOptions] = useState<{ value: string; label: string; name: string }[]>([]);
   const [showDuplicatesModal, setShowDuplicatesModal] = useState(false);
   const [duplicatesLoading, setDuplicatesLoading] = useState(false);
   const [duplicateGroups, setDuplicateGroups] = useState<
@@ -105,6 +108,18 @@ export default function LeadsPage() {
           { value: "", label: "All Industries" },
           ...data.map((i) => ({ value: i, label: i })),
         ]);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/openclaw/templates")
+      .then((r) => r.json())
+      .then((data: { _id: string; name: string; active: boolean }[]) => {
+        const active = (Array.isArray(data) ? data : []).filter((t) => t.active);
+        setTemplateFilterOptions(
+          active.map((t) => ({ value: t._id, label: t.name, name: t.name }))
+        );
       })
       .catch(() => {});
   }, []);
@@ -260,28 +275,66 @@ export default function LeadsPage() {
     }
   }
 
-  async function handleMarkContacted(leadId: string) {
+  async function handleMarkContacted(leadId: string, templateId?: string, templateName?: string) {
     const now = new Date().toISOString();
     const prev = leads.map((l) => ({ ...l }));
 
     setLeads((current) =>
       current.map((l) =>
         l._id === leadId
-          ? { ...l, status: "No Response", lastContactedDate: now }
+          ? { ...l, status: "No Response", lastContactedDate: now, outreachTemplateId: templateId, outreachTemplateName: templateName }
           : l
       )
+    );
+
+    const body: Record<string, unknown> = { status: "No Response", lastContactedDate: now };
+    if (templateId) body.outreachTemplateId = templateId;
+    if (templateName) body.outreachTemplateName = templateName;
+
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        setLeads(prev);
+      } else {
+        fetchLeads();
+      }
+    } catch {
+      setLeads(prev);
+    }
+  }
+
+  async function handleTemplateChange(leadId: string, templateId: string, templateName: string) {
+    const prev = leads.map((l) => ({ ...l }));
+    setLeads((current) =>
+      current.map((l) =>
+        l._id === leadId
+          ? { ...l, outreachTemplateId: templateId || undefined, outreachTemplateName: templateName || undefined }
+          : l
+      )
+    );
+    setSelectedLead((current) =>
+      current && current._id === leadId
+        ? { ...current, outreachTemplateId: templateId || undefined, outreachTemplateName: templateName || undefined }
+        : current
     );
 
     try {
       const res = await fetch(`/api/leads/${leadId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "No Response", lastContactedDate: now }),
+        body: JSON.stringify({ outreachTemplateId: templateId || null, outreachTemplateName: templateName || null }),
       });
       if (!res.ok) {
         setLeads(prev);
-      } else {
-        fetchLeads();
+        setSelectedLead((current) => {
+          if (!current) return null;
+          const reverted = prev.find((l) => l._id === current._id);
+          return reverted || current;
+        });
       }
     } catch {
       setLeads(prev);
@@ -624,7 +677,7 @@ export default function LeadsPage() {
               )}
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             <Select
               options={[{ value: "", label: "Set Status..." }, ...STATUS_OPTIONS]}
               value=""
@@ -644,6 +697,16 @@ export default function LeadsPage() {
               value=""
               onChange={(v) => {
                 if (v) handleBulkUpdate({ industry: v });
+              }}
+            />
+            <Select
+              options={[{ value: "", label: "Set Template..." }, ...templateFilterOptions]}
+              value=""
+              onChange={(v) => {
+                if (v) {
+                  const tpl = templateFilterOptions.find((t) => t.value === v);
+                  handleBulkUpdate({ outreachTemplateId: v, outreachTemplateName: tpl?.name || "" });
+                }
               }}
             />
             <DatePicker
@@ -667,7 +730,7 @@ export default function LeadsPage() {
         <OutreachQueue
           leads={queueLeads}
           onLeadClick={(lead) => { setOpenInEditMode(false); setSelectedLead(lead); }}
-          onMarkContacted={handleMarkContacted}
+          onMarkContacted={(lead) => setMarkingContactedLead(lead)}
           onSendMessage={(lead) => setMessagingLead(lead)}
           selectedIds={selectedIds}
           onToggleSelect={toggleSelected}
@@ -738,7 +801,20 @@ export default function LeadsPage() {
           open={!!messagingLead}
           onClose={() => setMessagingLead(null)}
           lead={messagingLead}
-          onSent={() => handleMarkContacted(messagingLead._id)}
+          onSent={(templateId, templateName) => handleMarkContacted(messagingLead._id, templateId, templateName)}
+        />
+      )}
+
+      {/* Mark Contacted Modal */}
+      {markingContactedLead && (
+        <MarkContactedModal
+          open={!!markingContactedLead}
+          onClose={() => setMarkingContactedLead(null)}
+          leadName={markingContactedLead.businessName || markingContactedLead.name}
+          onConfirm={(templateId, templateName) => {
+            handleMarkContacted(markingContactedLead._id, templateId, templateName);
+            setMarkingContactedLead(null);
+          }}
         />
       )}
 
@@ -753,6 +829,7 @@ export default function LeadsPage() {
             lead={selectedLead}
             onStatusChange={handleStatusChange}
             onToggleHot={handleToggleHot}
+            onTemplateChange={handleTemplateChange}
             onUpdate={handleUpdateLead}
             onDelete={handleDeleteLead}
             onConvertToClient={() => setConvertingLead(selectedLead)}
