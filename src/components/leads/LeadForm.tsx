@@ -66,6 +66,20 @@ function toDateInputValue(val?: string | Date | null): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function toDateTimeInputValue(val?: string | Date | null): string {
+  if (!val) return "";
+  const str = String(val);
+  const dtMatch = str.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+  if (dtMatch) return `${dtMatch[1]}T${dtMatch[2]}`;
+  const dateOnly = toDateInputValue(val);
+  if (!dateOnly) return "";
+  const d = new Date(val);
+  if (!isNaN(d.getTime()) && str.includes("T")) {
+    return `${dateOnly}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  }
+  return dateOnly;
+}
+
 export default function LeadForm({
   initialData,
   onSubmit,
@@ -81,7 +95,7 @@ export default function LeadForm({
         if (val !== undefined && val !== null) base[key] = String(val);
       }
     }
-    base.callScheduledDate = toDateInputValue(initialData?.callScheduledDate);
+    base.callScheduledDate = toDateTimeInputValue(initialData?.callScheduledDate);
     base.followUpDate = toDateInputValue(initialData?.followUpDate);
     base.lastContactedDate = toDateInputValue(initialData?.lastContactedDate);
     return base;
@@ -208,9 +222,10 @@ export default function LeadForm({
 
       {form.status === "Call Scheduled" && (
         <DatePicker
-          label="Call Scheduled Date"
+          label="Call Scheduled"
           value={form.callScheduledDate}
           onChange={(v) => update("callScheduledDate", v)}
+          showTime
         />
       )}
 

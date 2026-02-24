@@ -40,6 +40,20 @@ function formatDate(dateStr?: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+function formatDateTime(dateStr?: string): string {
+  if (!dateStr) return "—";
+  const d = parseLocalDate(dateStr);
+  if (!d) return "—";
+  const datePart = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const timeMatch = String(dateStr).match(/T(\d{2}):(\d{2})/);
+  if (!timeMatch) return datePart;
+  const hour = +timeMatch[1];
+  const minute = +timeMatch[2];
+  const period = hour >= 12 ? "PM" : "AM";
+  const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${datePart} at ${h12}:${String(minute).padStart(2, "0")} ${period}`;
+}
+
 function timeAgo(dateStr: string): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
@@ -297,7 +311,7 @@ export default function LeadDetailPanel({
         {lead.status === "Call Scheduled" && (
           <div>
             <dt className="text-xs font-medium text-text-tertiary uppercase tracking-wider">Call Scheduled</dt>
-            <dd className="text-sm text-text-primary mt-0.5">{formatDate(lead.callScheduledDate)}</dd>
+            <dd className="text-sm text-text-primary mt-0.5">{formatDateTime(lead.callScheduledDate)}</dd>
           </div>
         )}
       </div>
