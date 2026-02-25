@@ -52,6 +52,7 @@ export default function SendMessageModal({ open, onClose, lead, onSent }: SendMe
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [result, setResult] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fetchTemplates = useCallback(async () => {
@@ -118,6 +119,16 @@ export default function SendMessageModal({ open, onClose, lead, onSent }: SendMe
     }
   }
 
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(message);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback ignored
+    }
+  }
+
   const templateOptions = [
     { value: "", label: loadingTemplates ? "Loading templates..." : "Select a template..." },
     ...templates.map((t) => ({ value: t._id, label: t.name })),
@@ -170,6 +181,13 @@ export default function SendMessageModal({ open, onClose, lead, onSent }: SendMe
         <div className="flex justify-end gap-2 pt-1">
           <Button variant="secondary" onClick={onClose}>
             {result?.type === "success" ? "Done" : "Cancel"}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={handleCopy}
+            disabled={!message.trim()}
+          >
+            {copied ? "Copied!" : "Copy"}
           </Button>
           {result?.type !== "success" && (
             <Button

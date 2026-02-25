@@ -45,7 +45,7 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 5;
 
 export default function ActivityFeed() {
   const [activities, setActivities] = useState<Activity[]>([]);
