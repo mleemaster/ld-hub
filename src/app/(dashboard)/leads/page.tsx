@@ -65,6 +65,8 @@ export default function LeadsPage() {
   const toolsRef = useRef<HTMLDivElement>(null);
   const [templateFilterOptions, setTemplateFilterOptions] = useState<{ value: string; label: string; name: string }[]>([]);
   const [queueStateFilter, setQueueStateFilter] = useState("");
+  const [queueSourceFilter, setQueueSourceFilter] = useState("");
+  const [queueIndustryFilter, setQueueIndustryFilter] = useState("");
   const [showDuplicatesModal, setShowDuplicatesModal] = useState(false);
   const [duplicatesLoading, setDuplicatesLoading] = useState(false);
   const [duplicateGroups, setDuplicateGroups] = useState<
@@ -141,6 +143,8 @@ export default function LeadsPage() {
   const queueLeads = [...allFiltered]
     .filter((l) => l.status === "New")
     .filter((l) => !queueStateFilter || l.state === queueStateFilter)
+    .filter((l) => !queueSourceFilter || l.source === queueSourceFilter)
+    .filter((l) => !queueIndustryFilter || l.industry === queueIndustryFilter)
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   const pipelineLeads = [...allFiltered]
@@ -657,6 +661,16 @@ export default function LeadsPage() {
             options={STATE_FILTER_OPTIONS}
             value={queueStateFilter}
             onChange={setQueueStateFilter}
+          />
+          <Select
+            options={SOURCE_FILTER_OPTIONS}
+            value={queueSourceFilter}
+            onChange={setQueueSourceFilter}
+          />
+          <Select
+            options={industryFilterOptions}
+            value={queueIndustryFilter}
+            onChange={setQueueIndustryFilter}
           />
         </div>
       )}

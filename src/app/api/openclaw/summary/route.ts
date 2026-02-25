@@ -1,31 +1,39 @@
 /*
  * OpenClaw summary/cost aggregation API.
  * GET: Returns activity counts for today and cost breakdowns.
+ * All date boundaries use America/New_York so counters reset at midnight ET.
  */
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { OpenClawActivity } from "@/models/OpenClawActivity";
 
+const TZ = "America/New_York";
+
+function nowInET() {
+  const s = new Date().toLocaleString("en-US", { timeZone: TZ });
+  return new Date(s);
+}
+
 function startOfToday(): Date {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
+  const et = nowInET();
+  et.setHours(0, 0, 0, 0);
+  return et;
 }
 
 function startOfWeek(): Date {
-  const d = new Date();
-  const day = d.getDay();
+  const et = nowInET();
+  const day = et.getDay();
   const diff = day === 0 ? 6 : day - 1;
-  d.setDate(d.getDate() - diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  et.setDate(et.getDate() - diff);
+  et.setHours(0, 0, 0, 0);
+  return et;
 }
 
 function startOfMonth(): Date {
-  const d = new Date();
-  d.setDate(1);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  const et = nowInET();
+  et.setDate(1);
+  et.setHours(0, 0, 0, 0);
+  return et;
 }
 
 export async function GET() {
