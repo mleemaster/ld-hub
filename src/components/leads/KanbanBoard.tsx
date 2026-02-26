@@ -40,6 +40,20 @@ function formatDate(dateStr?: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function formatDateTime(dateStr?: string): string {
+  if (!dateStr) return "";
+  const d = parseLocalDate(dateStr);
+  if (!d) return "";
+  const datePart = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const timeMatch = String(dateStr).match(/T(\d{2}):(\d{2})/);
+  if (!timeMatch) return datePart;
+  const hour = +timeMatch[1];
+  const minute = +timeMatch[2];
+  const period = hour >= 12 ? "PM" : "AM";
+  const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${datePart} ${h12}:${String(minute).padStart(2, "0")} ${period}`;
+}
+
 function isOverdue(dateStr?: string): boolean {
   if (!dateStr) return false;
   const d = parseLocalDate(dateStr);
@@ -110,11 +124,18 @@ function KanbanCard({ lead, onClick, onEdit, isOverlay }: KanbanCardProps) {
       )}
       <div className="flex items-center justify-between mt-2 text-xs text-text-tertiary">
         <span>{lead.source}</span>
-        {lead.followUpDate && (
+        {lead.status === "Call Scheduled" && lead.callScheduledDate ? (
+          <span className={cn("flex items-center gap-1", isOverdue(lead.callScheduledDate) && "text-warning font-medium")}>
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
+            </svg>
+            {formatDateTime(lead.callScheduledDate)}
+          </span>
+        ) : lead.followUpDate ? (
           <span className={cn(isOverdue(lead.followUpDate) && "text-warning font-medium")}>
             {formatDate(lead.followUpDate)}
           </span>
-        )}
+        ) : null}
       </div>
     </div>
   );
