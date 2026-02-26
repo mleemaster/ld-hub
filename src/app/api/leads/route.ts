@@ -80,6 +80,14 @@ export async function PATCH(request: NextRequest) {
 
     const result = await Lead.updateMany({ _id: { $in: ids } }, safeUpdate);
 
+    if (safeUpdate.lastContactedDate) {
+      const contactDate = String(safeUpdate.lastContactedDate).split("T")[0];
+      await Lead.updateMany(
+        { _id: { $in: ids }, followUpDate: { $gte: new Date(`${contactDate}T00:00:00`), $lt: new Date(`${contactDate}T23:59:59.999`) } },
+        { $unset: { followUpDate: "" } }
+      );
+    }
+
     try {
       const fields = Object.entries(safeUpdate)
         .map(([k, v]) => `${k} → ${v}`)

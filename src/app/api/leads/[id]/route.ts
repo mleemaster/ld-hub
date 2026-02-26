@@ -41,6 +41,14 @@ export async function PUT(
       return NextResponse.json({ error: "Lead not found" }, { status: 404 });
     }
 
+    if (body.lastContactedDate && existing.followUpDate) {
+      const contactDate = String(body.lastContactedDate).split("T")[0];
+      const followUp = existing.followUpDate.toISOString().split("T")[0];
+      if (contactDate === followUp) {
+        body.followUpDate = null;
+      }
+    }
+
     const lead = await Lead.findByIdAndUpdate(id, body, { new: true });
 
     try {
