@@ -12,6 +12,7 @@ import Button from "@/components/ui/Button";
 import LeadForm, { type LeadFormData } from "@/components/leads/LeadForm";
 import { STATUS_OPTIONS } from "@/lib/lead-utils";
 import type { Lead, ActivityRecord } from "@/lib/lead-types";
+import DatePicker from "@/components/ui/DatePicker";
 import { cn, parseLocalDate } from "@/lib/utils";
 
 interface TemplateOption {
@@ -25,6 +26,7 @@ interface LeadDetailPanelProps {
   onStatusChange: (leadId: string, newStatus: string) => void;
   onToggleHot?: (leadId: string, isHot: boolean) => void;
   onTemplateChange?: (leadId: string, templateId: string, templateName: string) => void;
+  onCallScheduledDateChange?: (leadId: string, date: string) => void;
   onUpdate: (data: LeadFormData) => void;
   onDelete: () => void;
   onConvertToClient?: () => void;
@@ -79,6 +81,7 @@ export default function LeadDetailPanel({
   onStatusChange,
   onToggleHot,
   onTemplateChange,
+  onCallScheduledDateChange,
   onUpdate,
   onDelete,
   onConvertToClient,
@@ -309,9 +312,15 @@ export default function LeadDetailPanel({
 
         {/* Call Scheduled (conditional) */}
         {lead.status === "Call Scheduled" && (
-          <div>
-            <dt className="text-xs font-medium text-text-tertiary uppercase tracking-wider">Call Scheduled</dt>
-            <dd className="text-sm text-text-primary mt-0.5">{formatDateTime(lead.callScheduledDate)}</dd>
+          <div className="col-span-2">
+            <DatePicker
+              label="Call Scheduled"
+              value={lead.callScheduledDate || ""}
+              onChange={(val) => {
+                if (onCallScheduledDateChange) onCallScheduledDateChange(lead._id, val);
+              }}
+              showTime
+            />
           </div>
         )}
       </div>

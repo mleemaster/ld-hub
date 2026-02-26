@@ -254,6 +254,34 @@ export default function LeadsPage() {
     }
   }
 
+  async function handleCallScheduledDateChange(leadId: string, date: string) {
+    const prev = leads.map((l) => ({ ...l }));
+    setLeads((current) =>
+      current.map((l) => (l._id === leadId ? { ...l, callScheduledDate: date } : l))
+    );
+    setSelectedLead((current) =>
+      current && current._id === leadId ? { ...current, callScheduledDate: date } : current
+    );
+
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ callScheduledDate: date }),
+      });
+      if (!res.ok) {
+        setLeads(prev);
+        setSelectedLead((current) => {
+          if (!current) return null;
+          const reverted = prev.find((l) => l._id === current._id);
+          return reverted || current;
+        });
+      }
+    } catch {
+      setLeads(prev);
+    }
+  }
+
   async function handleToggleHot(leadId: string, isHot: boolean) {
     const prev = leads.map((l) => ({ ...l }));
     setLeads((current) =>
@@ -859,6 +887,7 @@ export default function LeadsPage() {
             onStatusChange={handleStatusChange}
             onToggleHot={handleToggleHot}
             onTemplateChange={handleTemplateChange}
+            onCallScheduledDateChange={handleCallScheduledDateChange}
             onUpdate={handleUpdateLead}
             onDelete={handleDeleteLead}
             onConvertToClient={() => setConvertingLead(selectedLead)}

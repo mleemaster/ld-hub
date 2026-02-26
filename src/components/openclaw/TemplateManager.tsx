@@ -53,6 +53,7 @@ export default function TemplateManager() {
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [stats, setStats] = useState<Record<string, TemplateStat>>({});
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -149,116 +150,160 @@ export default function TemplateManager() {
       ) : templates.length === 0 ? (
         <p className="text-sm text-text-tertiary">No templates created yet</p>
       ) : (
-        <div className="space-y-2">
-          {templates.map((template) => (
-            <div
-              key={template._id}
-              className="flex items-start gap-3 py-3 px-3 rounded-xl bg-surface border border-border"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <button
-                    onClick={() => setEditingTemplate(template)}
-                    className="text-sm font-medium text-text-primary hover:text-accent transition-colors cursor-pointer text-left"
-                  >
-                    {template.name}
-                  </button>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${typeBadgeColor(template.type)}`}
-                  >
-                    {formatType(template.type)}
-                  </span>
-                </div>
-                <p className="text-xs text-text-tertiary line-clamp-2">
-                  {template.content}
-                </p>
-                {stats[template._id] && stats[template._id].sent > 0 ? (
-                  <div className="mt-2">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-tertiary">
-                        <span className="text-sm font-medium text-text-primary">{stats[template._id].sent}</span>
-                        <span className="text-xs text-text-tertiary">sent</span>
-                      </span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-tertiary">
-                        <span className="text-sm font-medium text-text-primary">{stats[template._id].responded}</span>
-                        <span className="text-xs text-text-tertiary">responded</span>
-                      </span>
-                      {(() => {
-                        const rate = Math.round((stats[template._id].responded / stats[template._id].sent) * 100);
-                        const color = rate >= 40 ? "bg-success/10 text-success" : rate >= 15 ? "bg-warning/10 text-warning" : "bg-surface-tertiary text-text-tertiary";
-                        return (
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${color}`}>
-                            <span className="text-sm font-medium">{rate}%</span>
-                            <span className="text-xs">rate</span>
-                          </span>
-                        );
-                      })()}
-                    </div>
-                    <div className="mt-1.5 h-1.5 rounded-full bg-surface-tertiary overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-accent transition-all"
-                        style={{ width: `${Math.min(Math.round((stats[template._id].responded / stats[template._id].sent) * 100), 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-xs text-text-tertiary mt-2">No sends yet</p>
-                )}
-              </div>
+        <>
+          {(() => {
+            const activeTemplates = templates.filter((t) => t.active);
+            const archivedTemplates = templates.filter((t) => !t.active);
 
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => handleToggleActive(template)}
-                  className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${
-                    template.active ? "bg-success" : "bg-surface-tertiary"
-                  }`}
+            function renderCard(template: Template) {
+              return (
+                <div
+                  key={template._id}
+                  className="flex items-start gap-3 py-3 px-3 rounded-xl bg-surface border border-border"
                 >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                      template.active ? "translate-x-4" : "translate-x-0"
-                    }`}
-                  />
-                </button>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <button
+                        onClick={() => setEditingTemplate(template)}
+                        className="text-sm font-medium text-text-primary hover:text-accent transition-colors cursor-pointer text-left"
+                      >
+                        {template.name}
+                      </button>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full ${typeBadgeColor(template.type)}`}
+                      >
+                        {formatType(template.type)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-text-tertiary line-clamp-2">
+                      {template.content}
+                    </p>
+                    {stats[template._id] && stats[template._id].sent > 0 ? (
+                      <div className="mt-2">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-tertiary">
+                            <span className="text-sm font-medium text-text-primary">{stats[template._id].sent}</span>
+                            <span className="text-xs text-text-tertiary">sent</span>
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-tertiary">
+                            <span className="text-sm font-medium text-text-primary">{stats[template._id].responded}</span>
+                            <span className="text-xs text-text-tertiary">responded</span>
+                          </span>
+                          {(() => {
+                            const rate = Math.round((stats[template._id].responded / stats[template._id].sent) * 100);
+                            const color = rate >= 40 ? "bg-success/10 text-success" : rate >= 15 ? "bg-warning/10 text-warning" : "bg-surface-tertiary text-text-tertiary";
+                            return (
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${color}`}>
+                                <span className="text-sm font-medium">{rate}%</span>
+                                <span className="text-xs">rate</span>
+                              </span>
+                            );
+                          })()}
+                        </div>
+                        <div className="mt-1.5 h-1.5 rounded-full bg-surface-tertiary overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-accent transition-all"
+                            style={{ width: `${Math.min(Math.round((stats[template._id].responded / stats[template._id].sent) * 100), 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-text-tertiary mt-2">No sends yet</p>
+                    )}
+                  </div>
 
-                {deletingId === template._id ? (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2 shrink-0">
                     <button
-                      onClick={() => handleDelete(template._id)}
-                      className="px-2 py-1 rounded-lg bg-danger text-white text-xs cursor-pointer"
+                      onClick={() => handleToggleActive(template)}
+                      className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${
+                        template.active ? "bg-success" : "bg-surface-tertiary"
+                      }`}
                     >
-                      Confirm
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                          template.active ? "translate-x-4" : "translate-x-0"
+                        }`}
+                      />
                     </button>
-                    <button
-                      onClick={() => setDeletingId(null)}
-                      className="px-2 py-1 rounded-lg bg-surface-tertiary text-text-secondary text-xs cursor-pointer"
-                    >
-                      Cancel
-                    </button>
+
+                    {deletingId === template._id ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleDelete(template._id)}
+                          className="px-2 py-1 rounded-lg bg-danger text-white text-xs cursor-pointer"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => setDeletingId(null)}
+                          className="px-2 py-1 rounded-lg bg-surface-tertiary text-text-secondary text-xs cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setDeletingId(template._id)}
+                        className="p-1.5 rounded-lg hover:bg-surface-tertiary text-text-tertiary hover:text-danger transition-colors cursor-pointer"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth={1.5}
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-4">
+                {activeTemplates.length > 0 ? (
+                  <div className="space-y-2">
+                    {activeTemplates.map(renderCard)}
                   </div>
                 ) : (
-                  <button
-                    onClick={() => setDeletingId(template._id)}
-                    className="p-1.5 rounded-lg hover:bg-surface-tertiary text-text-tertiary hover:text-danger transition-colors cursor-pointer"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
+                  <p className="text-sm text-text-tertiary">No active templates</p>
+                )}
+
+                {archivedTemplates.length > 0 && (
+                  <div>
+                    <button
+                      onClick={() => setArchiveOpen((v) => !v)}
+                      className="flex items-center gap-2 text-xs font-medium text-text-tertiary uppercase tracking-wider hover:text-text-secondary transition-colors cursor-pointer w-full py-2"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-                      />
-                    </svg>
-                  </button>
+                      <svg
+                        className={`w-3.5 h-3.5 transition-transform ${archiveOpen ? "rotate-90" : ""}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
+                        stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                      </svg>
+                      Archive ({archivedTemplates.length})
+                    </button>
+                    {archiveOpen && (
+                      <div className="space-y-2 mt-2">
+                        {archivedTemplates.map(renderCard)}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
-        </div>
+            );
+          })()}
+        </>
       )}
 
       <TemplateForm
