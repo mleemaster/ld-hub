@@ -14,14 +14,16 @@ export async function POST() {
   try {
     await connectDB();
 
-    const clients = await Client.find({ stripeCustomerId: { $exists: true, $ne: null } }).lean();
+    const clients = await Client.find({}).lean();
     const customerMap = new Map<string, { id: string; name: string }>();
+    const emailMap = new Map<string, { id: string; name: string; mongoDoc: typeof clients[0] }>();
     for (const c of clients) {
+      const entry = { id: String(c._id), name: c.name };
       if (c.stripeCustomerId) {
-        customerMap.set(c.stripeCustomerId, {
-          id: String(c._id),
-          name: c.name,
-        });
+        customerMap.set(c.stripeCustomerId, entry);
+      }
+      if (c.email) {
+        emailMap.set(c.email.toLowerCase(), { ...entry, mongoDoc: c });
       }
     }
 
@@ -42,7 +44,25 @@ export async function POST() {
         continue;
       }
 
-      const client = customerMap.get(customerId);
+      let client = customerMap.get(customerId);
+
+      // Fallback: match by customer email if no stripeCustomerId link exists
+      if (!client) {
+        const customerEmail = invoice.customer_email?.toLowerCase();
+        if (customerEmail) {
+          const emailMatch = emailMap.get(customerEmail);
+          if (emailMatch) {
+            client = { id: emailMatch.id, name: emailMatch.name };
+            // Link this Stripe customer to the client for future webhook matches
+            await Client.updateOne(
+              { _id: emailMatch.id, stripeCustomerId: null },
+              { $set: { stripeCustomerId: customerId } }
+            );
+            customerMap.set(customerId, client);
+          }
+        }
+      }
+
       if (!client) {
         skipped++;
         skipReasons.push({ invoiceId: invoice.id, reason: "no_matching_client", customerId });
