@@ -33,8 +33,8 @@ export interface ExpenseCategoryBreakdown {
 export interface FinancesSummary {
   mrr: number;
   previousMrr: number;
-  setupFees: number;
   totalRevenue: number;
+  previousRevenue: number;
   totalExpenses: number;
   profit: number;
   planBreakdown: PlanBreakdown[];

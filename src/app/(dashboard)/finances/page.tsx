@@ -271,9 +271,14 @@ export default function FinancesPage() {
           <p className="text-3xl font-semibold text-text-primary">
             {formatCurrency(summary?.totalRevenue ?? 0)}
           </p>
-          <p className="text-xs text-text-tertiary mt-1">
-            {periodLabel} &middot; MRR + ${summary?.setupFees ?? 0} setup fees
-          </p>
+          <div className="flex items-center gap-1.5 mt-1">
+            {summary && summary.totalRevenue - summary.previousRevenue !== 0 && (
+              <Badge variant={summary.totalRevenue - summary.previousRevenue > 0 ? "success" : "danger"}>
+                {formatDelta(summary.totalRevenue - summary.previousRevenue)}
+              </Badge>
+            )}
+            <span className="text-xs text-text-tertiary">{periodComparison}</span>
+          </div>
         </div>
 
         <div className="rounded-2xl border border-border bg-surface-secondary p-6">

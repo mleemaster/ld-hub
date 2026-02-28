@@ -17,6 +17,7 @@ import { Client } from "@/models/Client";
 import { Lead } from "@/models/Lead";
 import { Activity } from "@/models/Activity";
 import { Expense } from "@/models/Expense";
+import { Payment } from "@/models/Payment";
 import {
   getPlanTierFromPriceId,
   isSetupPrice,
@@ -275,8 +276,27 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     await client.save();
   }
 
+  // Record the payment (unique index on stripeInvoiceId prevents duplicates)
+  const amount = (invoice.amount_paid ?? 0) / 100;
   try {
-    const amount = (invoice.amount_paid ?? 0) / 100;
+    await Payment.updateOne(
+      { stripeInvoiceId: invoice.id },
+      {
+        $setOnInsert: {
+          clientId: client._id,
+          clientName: client.name,
+          amount,
+          date: new Date(),
+          stripeInvoiceId: invoice.id,
+        },
+      },
+      { upsert: true }
+    );
+  } catch (err) {
+    console.error("[Stripe Webhook] Failed to record payment:", err);
+  }
+
+  try {
     await Activity.create({
       type: "payment_received",
       description: `Payment of $${amount.toFixed(2)} received for ${client.name}`,

@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Client } from "@/models/Client";
 import { Expense } from "@/models/Expense";
+import { Payment } from "@/models/Payment";
 import type { IClient } from "@/models/Client";
 import type {
   FinancesSummary,
@@ -148,18 +149,20 @@ export async function GET(request: NextRequest) {
     }
     const planBreakdown = Array.from(planMap.values());
 
-    // Setup fees in period
-    const setupFees = allClients
-      .filter(
-        (c) =>
-          c.setupFeeAmount &&
-          c.startDate &&
-          new Date(c.startDate) >= rangeStart &&
-          new Date(c.startDate) <= rangeEnd
-      )
-      .reduce((sum, c) => sum + (c.setupFeeAmount || 0), 0);
+    // Revenue from actual Stripe payments in period
+    const [revenueResult, prevRevenueResult] = await Promise.all([
+      Payment.aggregate([
+        { $match: { date: { $gte: rangeStart, $lte: rangeEnd } } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
+      Payment.aggregate([
+        { $match: { date: { $gte: prevStart, $lte: prevEnd } } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
+    ]);
 
-    const totalRevenue = mrr + setupFees;
+    const totalRevenue = revenueResult[0]?.total ?? 0;
+    const previousRevenue = prevRevenueResult[0]?.total ?? 0;
 
     // Expenses: recurring always at full monthly amount, one-time filtered to period
     const recurringExpenses = allExpenses
@@ -312,8 +315,8 @@ export async function GET(request: NextRequest) {
     const summary: FinancesSummary = {
       mrr,
       previousMrr,
-      setupFees,
       totalRevenue,
+      previousRevenue,
       totalExpenses,
       profit,
       planBreakdown,
