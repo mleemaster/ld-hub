@@ -28,6 +28,7 @@ export async function POST() {
     let created = 0;
     let skipped = 0;
     let errors = 0;
+    const skipReasons: { invoiceId: string; reason: string; customerId?: string; amount?: number }[] = [];
 
     for await (const invoice of stripe.invoices.list({ status: "paid", limit: 100 })) {
       const customerId =
@@ -37,18 +38,21 @@ export async function POST() {
 
       if (!customerId) {
         skipped++;
+        skipReasons.push({ invoiceId: invoice.id, reason: "no_customer_id" });
         continue;
       }
 
       const client = customerMap.get(customerId);
       if (!client) {
         skipped++;
+        skipReasons.push({ invoiceId: invoice.id, reason: "no_matching_client", customerId });
         continue;
       }
 
       const amount = (invoice.amount_paid ?? 0) / 100;
       if (amount <= 0) {
         skipped++;
+        skipReasons.push({ invoiceId: invoice.id, reason: "zero_amount", customerId, amount });
         continue;
       }
 
@@ -81,7 +85,7 @@ export async function POST() {
       }
     }
 
-    return NextResponse.json({ created, skipped, errors });
+    return NextResponse.json({ created, skipped, errors, clientsFound: customerMap.size, skipReasons });
   } catch (err) {
     console.error("[Payments Backfill] Error:", err);
     return NextResponse.json(
