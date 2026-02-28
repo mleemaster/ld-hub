@@ -92,7 +92,7 @@ const categoryFilterOptions = [
 ];
 
 export default function FinancesPage() {
-  const [period, setPeriod] = useState<TimePeriod>("thisMonth");
+  const [period, setPeriod] = useState<TimePeriod>("ytd");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [summary, setSummary] = useState<FinancesSummary | null>(null);
@@ -132,10 +132,12 @@ export default function FinancesPage() {
   }, [categoryFilter]);
 
   useEffect(() => {
+    if (period === "custom" && (!customStart || !customEnd)) return;
     setLoading(true);
     Promise.all([fetchSummary(), fetchExpenses()]).finally(() =>
       setLoading(false)
     );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchSummary, fetchExpenses]);
 
   async function handleAddExpense(formData: ExpenseFormData) {
