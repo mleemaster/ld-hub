@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         custom_fields: [],
         after_completion: {
           type: "redirect" as const,
-          redirect: { url: process.env.NEXT_PUBLIC_APP_URL || "https://leemaster.design" },
+          redirect: { url: "https://leemasterdesign.com/checkout/success" },
         },
       }),
     });

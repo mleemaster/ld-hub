@@ -33,6 +33,17 @@ function formatDate(dateStr: string): string {
   });
 }
 
+const FREQUENCY_LABELS: Record<string, string> = {
+  monthly: "Monthly",
+  quarterly: "Quarterly",
+  yearly: "Yearly",
+};
+
+function getTypeLabel(expense: Expense): string {
+  if (expense.type === "one-time") return "One-Time";
+  return FREQUENCY_LABELS[expense.frequency ?? "monthly"] ?? "Monthly";
+}
+
 export default function ExpenseTable({ expenses, onEdit }: ExpenseTableProps) {
   if (expenses.length === 0) {
     return (
@@ -77,7 +88,7 @@ export default function ExpenseTable({ expenses, onEdit }: ExpenseTableProps) {
                 <TableCell>{formatCurrency(expense.amount)}</TableCell>
                 <TableCell>
                   <Badge variant={expense.type === "recurring" ? "info" : "neutral"}>
-                    {expense.type === "recurring" ? "Recurring" : "One-Time"}
+                    {getTypeLabel(expense)}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -130,7 +141,7 @@ export default function ExpenseTable({ expenses, onEdit }: ExpenseTableProps) {
                 <Badge variant="default">{expense.clientName}</Badge>
               )}
               <Badge variant={expense.type === "recurring" ? "info" : "neutral"}>
-                {expense.type === "recurring" ? "Recurring" : "One-Time"}
+                {getTypeLabel(expense)}
               </Badge>
               <Badge variant="default">{expense.category}</Badge>
               <span className="ml-auto">{formatDate(expense.date)}</span>
