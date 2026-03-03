@@ -164,10 +164,17 @@ export async function GET(request: NextRequest) {
     const totalRevenue = revenueResult[0]?.total ?? 0;
     const previousRevenue = prevRevenueResult[0]?.total ?? 0;
 
-    // Expenses: recurring always at full monthly amount, one-time filtered to period
+    // Normalize recurring expense to monthly equivalent based on frequency
+    function monthlyAmount(expense: { amount: number; frequency?: string }): number {
+      if (expense.frequency === "quarterly") return expense.amount / 3;
+      if (expense.frequency === "yearly") return expense.amount / 12;
+      return expense.amount;
+    }
+
+    // Expenses: recurring normalized to monthly amount, one-time filtered to period
     const recurringExpenses = allExpenses
       .filter((e) => e.type === "recurring")
-      .reduce((sum, e) => sum + e.amount, 0);
+      .reduce((sum, e) => sum + monthlyAmount(e), 0);
 
     const oneTimeExpenses = allExpenses
       .filter(
@@ -234,7 +241,7 @@ export async function GET(request: NextRequest) {
 
         const periodRecurring = allExpenses
           .filter((e) => e.type === "recurring")
-          .reduce((sum, e) => sum + e.amount, 0);
+          .reduce((sum, e) => sum + monthlyAmount(e), 0);
         const periodOneTime = allExpenses
           .filter(
             (e) =>
@@ -276,7 +283,7 @@ export async function GET(request: NextRequest) {
 
         const periodRecurring = allExpenses
           .filter((e) => e.type === "recurring")
-          .reduce((sum, e) => sum + e.amount, 0);
+          .reduce((sum, e) => sum + monthlyAmount(e), 0);
         const periodOneTime = allExpenses
           .filter(
             (e) =>
@@ -300,7 +307,7 @@ export async function GET(request: NextRequest) {
     const catMap = new Map<string, number>();
     for (const e of allExpenses) {
       if (e.type === "recurring") {
-        catMap.set(e.category, (catMap.get(e.category) || 0) + e.amount);
+        catMap.set(e.category, (catMap.get(e.category) || 0) + monthlyAmount(e));
       } else if (
         new Date(e.date) >= rangeStart &&
         new Date(e.date) <= rangeEnd

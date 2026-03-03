@@ -13,10 +13,16 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
     const category = searchParams.get("category");
+    const clientId = searchParams.get("clientId");
 
-    const filter: Record<string, string> = {};
+    const filter: Record<string, unknown> = {};
     if (type) filter.type = type;
     if (category) filter.category = category;
+    if (clientId === "none") {
+      filter.clientId = null;
+    } else if (clientId) {
+      filter.clientId = clientId;
+    }
 
     const expenses = await Expense.find(filter).sort({ date: -1 });
     return NextResponse.json(expenses);

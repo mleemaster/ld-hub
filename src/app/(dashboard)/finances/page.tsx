@@ -22,6 +22,11 @@ import Badge from "@/components/ui/Badge";
 import { EXPENSE_CATEGORIES } from "@/lib/expense-constants";
 import type { FinancesSummary, Expense, ExpenseFormData, TimePeriod } from "@/lib/finance-types";
 
+interface ClientOption {
+  _id: string;
+  businessName: string;
+}
+
 function formatCurrency(value: number): string {
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
@@ -98,10 +103,25 @@ export default function FinancesPage() {
   const [summary, setSummary] = useState<FinancesSummary | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [clientFilter, setClientFilter] = useState("");
+  const [clientOptions, setClientOptions] = useState<{ value: string; label: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+
+  useEffect(() => {
+    fetch("/api/clients")
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: ClientOption[]) => {
+        setClientOptions([
+          { value: "", label: "All Clients" },
+          { value: "none", label: "Business Only" },
+          ...data.map((c) => ({ value: c._id, label: c.businessName })),
+        ]);
+      })
+      .catch(() => {});
+  }, []);
 
   const fetchSummary = useCallback(async () => {
     const range = getDateRange(period, customStart, customEnd);
@@ -121,6 +141,7 @@ export default function FinancesPage() {
     try {
       const params = new URLSearchParams();
       if (categoryFilter) params.set("category", categoryFilter);
+      if (clientFilter) params.set("clientId", clientFilter);
       const res = await fetch(`/api/expenses?${params}`);
       if (res.ok) {
         const data = await res.json();
@@ -129,7 +150,7 @@ export default function FinancesPage() {
     } catch {
       // Silent fail
     }
-  }, [categoryFilter]);
+  }, [categoryFilter, clientFilter]);
 
   useEffect(() => {
     if (period === "custom" && (!customStart || !customEnd)) return;
@@ -139,6 +160,12 @@ export default function FinancesPage() {
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchSummary, fetchExpenses]);
+
+  function getClientName(clientId: string): string | null {
+    if (!clientId) return null;
+    const match = clientOptions.find((c) => c.value === clientId);
+    return match ? match.label : null;
+  }
 
   async function handleAddExpense(formData: ExpenseFormData) {
     setSubmitting(true);
@@ -150,9 +177,12 @@ export default function FinancesPage() {
           name: formData.name.trim(),
           amount: parseFloat(formData.amount),
           type: formData.type,
+          frequency: formData.type === "recurring" ? formData.frequency : "monthly",
           category: formData.category,
           date: formData.date,
           autoTracked: false,
+          clientId: formData.clientId || null,
+          clientName: getClientName(formData.clientId),
         }),
       });
       if (res.ok) {
@@ -177,8 +207,11 @@ export default function FinancesPage() {
           name: formData.name.trim(),
           amount: parseFloat(formData.amount),
           type: formData.type,
+          frequency: formData.type === "recurring" ? formData.frequency : "monthly",
           category: formData.category,
           date: formData.date,
+          clientId: formData.clientId || null,
+          clientName: getClientName(formData.clientId),
         }),
       });
       if (res.ok) {
@@ -422,6 +455,13 @@ export default function FinancesPage() {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium text-text-secondary">Expenses</h3>
           <div className="flex items-center gap-3">
+            <Select
+              options={clientOptions}
+              value={clientFilter}
+              onChange={setClientFilter}
+              placeholder="All Clients"
+              className="w-44"
+            />
             <Select
               options={categoryFilterOptions}
               value={categoryFilter}

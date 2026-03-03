@@ -13,6 +13,7 @@ import ClientForm from "@/components/clients/ClientForm";
 import { PROJECT_STATUS_OPTIONS } from "@/lib/client-utils";
 import type { Client, ClientFormData, IntakeForm } from "@/lib/client-types";
 import type { ActivityRecord } from "@/lib/lead-types";
+import type { Expense } from "@/lib/finance-types";
 import { parseLocalDate, formatCurrency } from "@/lib/utils";
 
 interface ClientDetailPanelProps {
@@ -122,10 +123,31 @@ export default function ClientDetailPanel({
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [loadingActivities, setLoadingActivities] = useState(true);
   const [intakeOpen, setIntakeOpen] = useState(false);
+  const [expensesOpen, setExpensesOpen] = useState(false);
+  const [clientExpenses, setClientExpenses] = useState<Expense[]>([]);
+  const [loadingExpenses, setLoadingExpenses] = useState(true);
 
   useEffect(() => {
     setEditing(initialEditing);
   }, [initialEditing, client._id]);
+
+  const fetchExpenses = useCallback(async () => {
+    setLoadingExpenses(true);
+    try {
+      const res = await fetch(`/api/expenses?clientId=${client._id}`);
+      if (res.ok) {
+        setClientExpenses(await res.json());
+      }
+    } catch {
+      // Silent fail
+    } finally {
+      setLoadingExpenses(false);
+    }
+  }, [client._id]);
+
+  useEffect(() => {
+    fetchExpenses();
+  }, [fetchExpenses]);
 
   const fetchActivities = useCallback(async () => {
     setLoadingActivities(true);
@@ -343,6 +365,55 @@ export default function ClientDetailPanel({
           <dt className="text-xs font-medium text-text-tertiary uppercase tracking-wider">Updated</dt>
           <dd className="text-sm text-text-primary mt-0.5">{formatDate(client.updatedAt)}</dd>
         </div>
+      </div>
+
+      {/* Client Expenses */}
+      <div className="border border-border rounded-xl overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setExpensesOpen(!expensesOpen)}
+          className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
+        >
+          <span>Expenses{clientExpenses.length > 0 ? ` (${clientExpenses.length})` : ""}</span>
+          <svg
+            className={`w-4 h-4 text-text-tertiary transition-transform ${expensesOpen ? "rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+        {expensesOpen && (
+          <div className="px-4 pb-4 pt-1 border-t border-border">
+            {loadingExpenses ? (
+              <div className="flex justify-center py-4">
+                <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : clientExpenses.length === 0 ? (
+              <p className="text-sm text-text-tertiary text-center py-3">No expenses for this client</p>
+            ) : (
+              <div className="space-y-2 pt-2">
+                {clientExpenses.map((exp) => (
+                  <div key={exp._id} className="flex items-center justify-between text-sm">
+                    <div>
+                      <span className="text-text-primary font-medium">{exp.name}</span>
+                      <span className="text-text-tertiary ml-2 text-xs">
+                        {exp.category}
+                        {exp.type === "recurring" && ` · ${exp.frequency || "monthly"}`}
+                        {exp.type === "one-time" && " · one-time"}
+                      </span>
+                    </div>
+                    <span className="text-text-primary font-medium">
+                      {formatCurrency(exp.amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Notes */}

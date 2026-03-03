@@ -2,7 +2,7 @@
  * Client-safe types for the finances page and components.
  * Keeps mongoose out of client bundles.
  */
-import type { ExpenseType, ExpenseCategory } from "@/lib/expense-constants";
+import type { ExpenseType, ExpenseFrequency, ExpenseCategory } from "@/lib/expense-constants";
 
 export type TimePeriod = "last7" | "last30" | "thisMonth" | "ytd" | "last12Months" | "custom";
 
@@ -53,9 +53,12 @@ export interface Expense {
   name: string;
   amount: number;
   type: ExpenseType;
+  frequency?: ExpenseFrequency;
   category: ExpenseCategory;
   date: string;
   autoTracked: boolean;
+  clientId?: string;
+  clientName?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -64,6 +67,8 @@ export interface ExpenseFormData {
   name: string;
   amount: string;
   type: ExpenseType;
+  frequency: ExpenseFrequency;
   category: ExpenseCategory;
   date: string;
+  clientId: string;
 }

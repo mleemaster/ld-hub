@@ -50,6 +50,7 @@ export default function ExpenseTable({ expenses, onEdit }: ExpenseTableProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
+              <TableHead>Client</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Category</TableHead>
@@ -69,6 +70,9 @@ export default function ExpenseTable({ expenses, onEdit }: ExpenseTableProps) {
                       </span>
                     )}
                   </div>
+                </TableCell>
+                <TableCell className="text-text-secondary">
+                  {expense.clientName || "\u2014"}
                 </TableCell>
                 <TableCell>{formatCurrency(expense.amount)}</TableCell>
                 <TableCell>
@@ -121,7 +125,10 @@ export default function ExpenseTable({ expenses, onEdit }: ExpenseTableProps) {
                 {formatCurrency(expense.amount)}
               </span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-text-secondary">
+            <div className="flex items-center gap-2 text-xs text-text-secondary flex-wrap">
+              {expense.clientName && (
+                <Badge variant="default">{expense.clientName}</Badge>
+              )}
               <Badge variant={expense.type === "recurring" ? "info" : "neutral"}>
                 {expense.type === "recurring" ? "Recurring" : "One-Time"}
               </Badge>

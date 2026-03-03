@@ -4,13 +4,13 @@
  */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import DatePicker from "@/components/ui/DatePicker";
 import Button from "@/components/ui/Button";
-import { EXPENSE_TYPES, EXPENSE_CATEGORIES } from "@/lib/expense-constants";
+import { EXPENSE_TYPES, EXPENSE_FREQUENCIES, EXPENSE_CATEGORIES } from "@/lib/expense-constants";
 import type { Expense, ExpenseFormData } from "@/lib/finance-types";
 
 interface ExpenseFormProps {
@@ -30,7 +30,14 @@ function toDateInputValue(dateStr?: string): string {
 }
 
 const typeOptions = EXPENSE_TYPES.map((t) => ({ value: t, label: t === "one-time" ? "One-Time" : "Recurring" }));
+const frequencyOptions = EXPENSE_FREQUENCIES.map((f) => ({ value: f, label: f.charAt(0).toUpperCase() + f.slice(1) }));
 const categoryOptions = EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }));
+
+const AMOUNT_LABELS: Record<string, string> = {
+  monthly: "Amount ($/mo)",
+  quarterly: "Amount ($/qtr)",
+  yearly: "Amount ($/yr)",
+};
 
 function getInitialForm(initialData?: Expense | null): ExpenseFormData {
   if (initialData) {
@@ -38,16 +45,20 @@ function getInitialForm(initialData?: Expense | null): ExpenseFormData {
       name: initialData.name,
       amount: String(initialData.amount),
       type: initialData.type,
+      frequency: initialData.frequency || "monthly",
       category: initialData.category,
       date: toDateInputValue(initialData.date),
+      clientId: initialData.clientId || "",
     };
   }
   return {
     name: "",
     amount: "",
     type: "recurring",
+    frequency: "monthly",
     category: "Software",
     date: toDateInputValue(new Date().toISOString()),
+    clientId: "",
   };
 }
 
@@ -84,6 +95,19 @@ function ExpenseFormInner({
   const [form, setForm] = useState<ExpenseFormData>(() => getInitialForm(initialData));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [clients, setClients] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/clients")
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: { _id: string; businessName: string }[]) => {
+        setClients([
+          { value: "", label: "None (Business)" },
+          ...data.map((c) => ({ value: c._id, label: c.businessName })),
+        ]);
+      })
+      .catch(() => {});
+  }, []);
 
   function handleChange(field: keyof ExpenseFormData, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -122,8 +146,16 @@ function ExpenseFormInner({
         error={errors.name}
       />
 
+      <Select
+        label="Client"
+        options={clients}
+        value={form.clientId}
+        onChange={(v) => handleChange("clientId", v)}
+        placeholder="None (Business)"
+      />
+
       <Input
-        label="Amount ($/mo)"
+        label={form.type === "recurring" ? (AMOUNT_LABELS[form.frequency] || "Amount ($/mo)") : "Amount ($)"}
         type="number"
         step="0.01"
         min="0"
@@ -133,13 +165,21 @@ function ExpenseFormInner({
         error={errors.amount}
       />
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className={`grid gap-4 ${form.type === "recurring" ? "grid-cols-3" : "grid-cols-2"}`}>
         <Select
           label="Type"
           options={typeOptions}
           value={form.type}
           onChange={(v) => handleChange("type", v)}
         />
+        {form.type === "recurring" && (
+          <Select
+            label="Frequency"
+            options={frequencyOptions}
+            value={form.frequency}
+            onChange={(v) => handleChange("frequency", v)}
+          />
+        )}
         <Select
           label="Category"
           options={categoryOptions}
