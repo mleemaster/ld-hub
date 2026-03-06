@@ -71,5 +71,5 @@ export const STATE_NAME_TO_ABBR: Record<string, string> = {
 };
 
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
-export type LeadSource = (typeof LEAD_SOURCES)[number];
+export type LeadSource = string;
 export type Industry = (typeof INDUSTRIES)[number];

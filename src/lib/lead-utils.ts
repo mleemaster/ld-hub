@@ -3,7 +3,7 @@
  * attention detection, and client-side search.
  */
 import type { BadgeVariant } from "@/components/ui/Badge";
-import { LEAD_STATUSES, LEAD_SOURCES, INDUSTRIES, PIPELINE_STATUSES, US_STATES, STATE_NAME_TO_ABBR } from "@/lib/lead-constants";
+import { LEAD_STATUSES, INDUSTRIES, PIPELINE_STATUSES, US_STATES, STATE_NAME_TO_ABBR } from "@/lib/lead-constants";
 import type { LeadStatus } from "@/lib/lead-constants";
 import { parseLocalDate } from "@/lib/utils";
 
@@ -27,7 +27,6 @@ function toOptions(values: readonly string[]) {
 }
 
 export const STATUS_OPTIONS = toOptions(LEAD_STATUSES);
-export const SOURCE_OPTIONS = toOptions(LEAD_SOURCES);
 export const INDUSTRY_OPTIONS = toOptions(INDUSTRIES);
 export const STATE_OPTIONS = toOptions(US_STATES);
 
@@ -36,7 +35,6 @@ export const PIPELINE_STATUS_FILTER_OPTIONS = [
   { value: "", label: "All Statuses" },
   ...toOptions(PIPELINE_STATUSES),
 ];
-export const SOURCE_FILTER_OPTIONS = [{ value: "", label: "All Sources" }, ...SOURCE_OPTIONS];
 export const INDUSTRY_FILTER_OPTIONS = [{ value: "", label: "All Industries" }, ...INDUSTRY_OPTIONS];
 export const STATE_FILTER_OPTIONS = [{ value: "", label: "All States" }, ...STATE_OPTIONS];
 

@@ -29,10 +29,8 @@ import type { Lead } from "@/lib/lead-types";
 import DatePicker from "@/components/ui/DatePicker";
 import {
   PIPELINE_STATUS_FILTER_OPTIONS,
-  SOURCE_FILTER_OPTIONS,
   STATE_FILTER_OPTIONS,
   STATUS_OPTIONS,
-  SOURCE_OPTIONS,
   searchLeads,
   isNeedingAttention,
 } from "@/lib/lead-utils";
@@ -53,6 +51,8 @@ export default function LeadsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmingBulkDelete, setConfirmingBulkDelete] = useState(false);
   const [industryFilterOptions, setIndustryFilterOptions] = useState([{ value: "", label: "All Industries" }]);
+  const [sourceFilterOptions, setSourceFilterOptions] = useState([{ value: "", label: "All Sources" }]);
+  const [sourceOptions, setSourceOptions] = useState<{ value: string; label: string }[]>([]);
   const [messagingLead, setMessagingLead] = useState<Lead | null>(null);
   const [markingContactedLead, setMarkingContactedLead] = useState<Lead | null>(null);
   const [convertingLead, setConvertingLead] = useState<Lead | null>(null);
@@ -112,6 +112,16 @@ export default function LeadsPage() {
           { value: "", label: "All Industries" },
           ...data.map((i) => ({ value: i, label: i })),
         ]);
+      })
+      .catch(() => {});
+    fetch("/api/lead-sources")
+      .then((r) => r.json())
+      .then((data: string[]) => {
+        setSourceFilterOptions([
+          { value: "", label: "All Sources" },
+          ...data.map((s) => ({ value: s, label: s })),
+        ]);
+        setSourceOptions(data.map((s) => ({ value: s, label: s })));
       })
       .catch(() => {});
   }, []);
@@ -670,7 +680,7 @@ export default function LeadsPage() {
             onChange={(v) => setFilters((f) => ({ ...f, status: v }))}
           />
           <Select
-            options={SOURCE_FILTER_OPTIONS}
+            options={sourceFilterOptions}
             value={filters.source}
             onChange={(v) => setFilters((f) => ({ ...f, source: v }))}
           />
@@ -691,7 +701,7 @@ export default function LeadsPage() {
             onChange={setQueueStateFilter}
           />
           <Select
-            options={SOURCE_FILTER_OPTIONS}
+            options={sourceFilterOptions}
             value={queueSourceFilter}
             onChange={setQueueSourceFilter}
           />
@@ -742,7 +752,7 @@ export default function LeadsPage() {
               }}
             />
             <Select
-              options={[{ value: "", label: "Set Source..." }, ...SOURCE_OPTIONS]}
+              options={[{ value: "", label: "Set Source..." }, ...sourceOptions]}
               value=""
               onChange={(v) => {
                 if (v) handleBulkUpdate({ source: v });

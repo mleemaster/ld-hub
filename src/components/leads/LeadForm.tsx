@@ -13,7 +13,6 @@ import Button from "@/components/ui/Button";
 import DatePicker from "@/components/ui/DatePicker";
 import {
   STATUS_OPTIONS,
-  SOURCE_OPTIONS,
   STATE_OPTIONS,
 } from "@/lib/lead-utils";
 
@@ -105,11 +104,18 @@ export default function LeadForm({
   const [industries, setIndustries] = useState<string[]>([]);
   const [creatingIndustry, setCreatingIndustry] = useState(false);
   const [newIndustryName, setNewIndustryName] = useState("");
+  const [sources, setSources] = useState<string[]>([]);
+  const [creatingSource, setCreatingSource] = useState(false);
+  const [newSourceName, setNewSourceName] = useState("");
 
   useEffect(() => {
     fetch("/api/industries")
       .then((r) => r.json())
       .then((data) => setIndustries(data))
+      .catch(() => {});
+    fetch("/api/lead-sources")
+      .then((r) => r.json())
+      .then((data) => setSources(data))
       .catch(() => {});
   }, []);
 
@@ -131,10 +137,34 @@ export default function LeadForm({
     if (validate()) onSubmit(form);
   }
 
-  const sourceOptionsWithPlaceholder = [
+  const sourceOptions = [
     { value: "", label: "Select source..." },
-    ...SOURCE_OPTIONS,
+    ...sources.map((s) => ({ value: s, label: s })),
+    { value: "__create_source__", label: "+ Create new..." },
   ];
+
+  async function handleCreateSource() {
+    if (!newSourceName.trim()) return;
+    try {
+      const res = await fetch("/api/lead-sources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newSourceName.trim() }),
+      });
+      if (res.ok || res.status === 409) {
+        const name = newSourceName.trim();
+        update("source", name);
+        if (!sources.includes(name)) {
+          setSources((prev) => [...prev.filter((s) => s !== "Other"), name, "Other"]);
+        }
+      }
+    } catch {
+      // Silent fail
+    } finally {
+      setCreatingSource(false);
+      setNewSourceName("");
+    }
+  }
 
   const industryOptions = [
     { value: "", label: "Select industry..." },
@@ -211,13 +241,39 @@ export default function LeadForm({
           value={form.status}
           onChange={(v) => update("status", v)}
         />
-        <Select
-          label="Source"
-          options={sourceOptionsWithPlaceholder}
-          value={form.source}
-          onChange={(v) => update("source", v)}
-          error={errors.source}
-        />
+        {creatingSource ? (
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-text-primary">New Source</label>
+            <div className="flex gap-2">
+              <Input
+                value={newSourceName}
+                onChange={(e) => setNewSourceName(e.target.value)}
+                placeholder="Source name..."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); handleCreateSource(); }
+                  if (e.key === "Escape") { setCreatingSource(false); setNewSourceName(""); }
+                }}
+                autoFocus
+              />
+              <Button type="button" size="sm" onClick={handleCreateSource}>Add</Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => { setCreatingSource(false); setNewSourceName(""); }}>Cancel</Button>
+            </div>
+          </div>
+        ) : (
+          <Select
+            label="Source"
+            options={sourceOptions}
+            value={form.source}
+            onChange={(v) => {
+              if (v === "__create_source__") {
+                setCreatingSource(true);
+              } else {
+                update("source", v);
+              }
+            }}
+            error={errors.source}
+          />
+        )}
       </div>
 
       {form.status === "Call Scheduled" && (

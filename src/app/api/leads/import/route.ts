@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Lead, LEAD_STATUSES, LEAD_SOURCES } from "@/models/Lead";
+import { LeadSource } from "@/models/LeadSource";
 import { Activity } from "@/models/Activity";
 
 function resolveEnum<T extends string>(value: string, allowed: readonly T[]): T | null {
@@ -24,6 +25,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No leads provided" }, { status: 400 });
     }
 
+    const customSources = await LeadSource.find().lean();
+    const allSourceNames = [...new Set([...LEAD_SOURCES, ...customSources.map((s) => s.name)])];
+
+    function resolveSource(value: string): string | null {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      return allSourceNames.find((s) => s.toLowerCase() === trimmed.toLowerCase()) ?? null;
+    }
+
+    const newSourceNames = new Set<string>();
+
     const validLeads = [];
     const errors: string[] = [];
 
@@ -32,9 +44,16 @@ export async function POST(request: NextRequest) {
       const resolvedStatus = row.status?.trim()
         ? resolveEnum(row.status, LEAD_STATUSES)
         : null;
-      const resolvedSource = row.source?.trim()
-        ? resolveEnum(row.source, LEAD_SOURCES)
+      let resolvedSource = row.source?.trim()
+        ? resolveSource(row.source)
         : null;
+
+      if (!resolvedSource && row.source?.trim()) {
+        const name = row.source.trim();
+        resolvedSource = name;
+        newSourceNames.add(name);
+      }
+
       validLeads.push({
         name: row.name?.trim() || row.businessName?.trim() || "Unknown",
         businessName: row.businessName?.trim() || undefined,
@@ -55,6 +74,14 @@ export async function POST(request: NextRequest) {
 
     if (validLeads.length === 0) {
       return NextResponse.json({ error: "No valid leads to import", errors }, { status: 400 });
+    }
+
+    for (const sourceName of newSourceNames) {
+      try {
+        await LeadSource.create({ name: sourceName });
+      } catch {
+        // Ignore duplicates
+      }
     }
 
     const inserted = await Lead.insertMany(validLeads);
