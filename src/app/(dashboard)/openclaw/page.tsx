@@ -21,6 +21,8 @@ interface HeartbeatStatus {
 interface Summary {
   messagesSentToday: number;
   apiSpendThisMonth: number;
+  totalMessagesSent: number;
+  uniqueLeadsContacted: number;
 }
 
 export default function OpenClawPage() {
@@ -32,6 +34,8 @@ export default function OpenClawPage() {
   const [summary, setSummary] = useState<Summary>({
     messagesSentToday: 0,
     apiSpendThisMonth: 0,
+    totalMessagesSent: 0,
+    uniqueLeadsContacted: 0,
   });
   const [loaded, setLoaded] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -46,6 +50,8 @@ export default function OpenClawPage() {
         setSummary({
           messagesSentToday: summaryData.messagesSentToday ?? 0,
           apiSpendThisMonth: summaryData.apiSpendThisMonth ?? 0,
+          totalMessagesSent: summaryData.totalMessagesSent ?? 0,
+          uniqueLeadsContacted: summaryData.uniqueLeadsContacted ?? 0,
         });
       })
       .catch(() => {})
@@ -98,6 +104,20 @@ export default function OpenClawPage() {
             {loaded ? summary.messagesSentToday : "--"}
           </p>
           <p className="text-xs text-text-tertiary mt-1">Today</p>
+          <div className="mt-3 pt-3 border-t border-border grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-lg font-semibold text-text-primary">
+                {loaded ? summary.totalMessagesSent.toLocaleString() : "--"}
+              </p>
+              <p className="text-xs text-text-tertiary">Total Sent</p>
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-text-primary">
+                {loaded ? summary.uniqueLeadsContacted.toLocaleString() : "--"}
+              </p>
+              <p className="text-xs text-text-tertiary">Leads Contacted</p>
+            </div>
+          </div>
         </div>
 
         <div className="rounded-2xl border border-border bg-surface-secondary p-6">
