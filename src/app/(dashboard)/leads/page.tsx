@@ -60,6 +60,12 @@ export default function LeadsPage() {
   const [paymentLinkPlan, setPaymentLinkPlan] = useState("");
   const [paymentLinkLoading, setPaymentLinkLoading] = useState(false);
   const [paymentLinkResult, setPaymentLinkResult] = useState<string | null>(null);
+  const [paymentLinkDiscount, setPaymentLinkDiscount] = useState<{
+    enabled: boolean;
+    type: "percent" | "fixed";
+    value: number;
+    appliesTo: "setup" | "subscription" | "both";
+  }>({ enabled: false, type: "percent", value: 0, appliesTo: "setup" });
   const [addLeadError, setAddLeadError] = useState<string | null>(null);
   const [showToolsMenu, setShowToolsMenu] = useState(false);
   const toolsRef = useRef<HTMLDivElement>(null);
@@ -486,6 +492,13 @@ export default function LeadsPage() {
           planTier: paymentLinkPlan,
           email: paymentLinkLead.email || undefined,
           leadId: paymentLinkLead._id,
+          ...(paymentLinkDiscount.enabled && paymentLinkDiscount.value > 0 && {
+            discount: {
+              type: paymentLinkDiscount.type,
+              value: paymentLinkDiscount.value,
+              appliesTo: paymentLinkDiscount.appliesTo,
+            },
+          }),
         }),
       });
       if (res.ok) {
@@ -506,6 +519,7 @@ export default function LeadsPage() {
     setPaymentLinkLead(null);
     setPaymentLinkPlan("");
     setPaymentLinkResult(null);
+    setPaymentLinkDiscount({ enabled: false, type: "percent", value: 0, appliesTo: "setup" });
   }
 
   async function handleCheckDuplicates() {
@@ -1013,6 +1027,48 @@ export default function LeadsPage() {
               value={paymentLinkPlan}
               onChange={setPaymentLinkPlan}
             />
+            <div>
+              <button
+                type="button"
+                className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+                onClick={() => setPaymentLinkDiscount(d => ({ ...d, enabled: !d.enabled }))}
+              >
+                {paymentLinkDiscount.enabled ? "− Remove discount" : "+ Add discount"}
+              </button>
+              {paymentLinkDiscount.enabled && (
+                <div className="mt-3 space-y-3 p-3 bg-surface-secondary rounded-xl border border-border">
+                  <div className="flex gap-3">
+                    <Select
+                      label="Type"
+                      options={[
+                        { value: "percent", label: "Percent off" },
+                        { value: "fixed", label: "Fixed amount off" },
+                      ]}
+                      value={paymentLinkDiscount.type}
+                      onChange={(v) => setPaymentLinkDiscount(d => ({ ...d, type: v as "percent" | "fixed" }))}
+                    />
+                    <Input
+                      label={paymentLinkDiscount.type === "percent" ? "Percent (%)" : "Amount ($)"}
+                      type="number"
+                      min={0}
+                      max={paymentLinkDiscount.type === "percent" ? 100 : undefined}
+                      value={paymentLinkDiscount.value || ""}
+                      onChange={(e) => setPaymentLinkDiscount(d => ({ ...d, value: Number(e.target.value) }))}
+                    />
+                  </div>
+                  <Select
+                    label="Applies to"
+                    options={[
+                      { value: "setup", label: "Setup fee only" },
+                      { value: "subscription", label: "Subscription only" },
+                      { value: "both", label: "Both" },
+                    ]}
+                    value={paymentLinkDiscount.appliesTo}
+                    onChange={(v) => setPaymentLinkDiscount(d => ({ ...d, appliesTo: v as "setup" | "subscription" | "both" }))}
+                  />
+                </div>
+              )}
+            </div>
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={closePaymentLinkModal}>
                 Cancel
