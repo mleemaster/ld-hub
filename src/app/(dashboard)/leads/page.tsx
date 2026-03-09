@@ -501,14 +501,17 @@ export default function LeadsPage() {
           }),
         }),
       });
+      const data = await res.json();
       if (res.ok) {
-        const { url } = await res.json();
-        setPaymentLinkResult(url);
+        setPaymentLinkResult(data.url);
         try {
-          await navigator.clipboard.writeText(url);
+          await navigator.clipboard.writeText(data.url);
         } catch {
           // Clipboard may not be available
         }
+      } else {
+        console.error("[Payment Link]", data.error);
+        alert(data.error || "Failed to create payment link");
       }
     } finally {
       setPaymentLinkLoading(false);
