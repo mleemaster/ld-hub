@@ -2,8 +2,8 @@
  * Generate a Stripe Payment Link for a lead.
  * Accepts a plan tier, lead email, and optional discount config.
  * The link includes setup fee + subscription line items where applicable.
- * When a discount is specified, a single-use Stripe coupon is created
- * and attached to the payment link via the `discounts` parameter.
+ * When a discount is specified, a single-use Stripe coupon + promotion code
+ * are created, and the promo code is prefilled on the payment link URL.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       lineItems.push({ price: setupPriceId, quantity: 1 });
     }
 
-    let discounts: { coupon: string }[] | undefined;
+    let promoCode: string | undefined;
 
     if (discount && discount.value > 0) {
       const targetPriceIds: string[] = [];
@@ -81,7 +81,11 @@ export async function POST(request: NextRequest) {
       }
 
       const coupon = await stripe.coupons.create(couponParams);
-      discounts = [{ coupon: coupon.id }];
+      const promotion = await stripe.promotionCodes.create({
+        promotion: { type: "coupon", coupon: coupon.id },
+        max_redemptions: 1,
+      });
+      promoCode = promotion.code;
     }
 
     const paymentLink = await stripe.paymentLinks.create({
@@ -90,7 +94,7 @@ export async function POST(request: NextRequest) {
         ...(leadId && { leadId }),
         planTier,
       },
-      ...(discounts && { discounts }),
+      ...(promoCode && { allow_promotion_codes: true }),
       ...(email && {
         custom_fields: [],
         after_completion: {
@@ -100,7 +104,12 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    return NextResponse.json({ url: paymentLink.url });
+    let url = paymentLink.url;
+    if (promoCode) {
+      url += `?prefilled_promo_code=${promoCode}`;
+    }
+
+    return NextResponse.json({ url });
   } catch (err) {
     console.error("[Payment Link] Failed to create:", err);
     const message = err instanceof Error ? err.message : "Failed to create payment link";
