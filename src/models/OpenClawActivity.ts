@@ -10,6 +10,7 @@ export const OPENCLAW_ACTIVITY_TYPES = [
   "lead_scraped",
   "message_sent",
   "follow_up_sent",
+  "lead_contacted",
   "lead_added",
   "error",
 ] as const;

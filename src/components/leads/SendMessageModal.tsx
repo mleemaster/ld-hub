@@ -25,6 +25,7 @@ interface SendMessageModalProps {
   onClose: () => void;
   lead: Lead;
   onSent: (templateId?: string, templateName?: string) => void;
+  onMarkContacted: (templateId?: string, templateName?: string) => void;
 }
 
 const PLACEHOLDER_MAP: Record<string, keyof Lead> = {
@@ -46,13 +47,14 @@ function fillTemplate(content: string, lead: Lead): string {
   return filled;
 }
 
-export default function SendMessageModal({ open, onClose, lead, onSent }: SendMessageModalProps) {
+export default function SendMessageModal({ open, onClose, lead, onSent, onMarkContacted }: SendMessageModalProps) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [markedContacted, setMarkedContacted] = useState(false);
   const [result, setResult] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fetchTemplates = useCallback(async () => {
@@ -79,6 +81,7 @@ export default function SendMessageModal({ open, onClose, lead, onSent }: SendMe
       setSelectedTemplateId("");
       setMessage("");
       setResult(null);
+      setMarkedContacted(false);
     }
   }, [open, fetchTemplates]);
 
@@ -178,26 +181,46 @@ export default function SendMessageModal({ open, onClose, lead, onSent }: SendMe
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-2 pt-1">
-          <Button variant="secondary" onClick={onClose}>
-            {result?.type === "success" ? "Done" : "Cancel"}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={handleCopy}
-            disabled={!message.trim()}
-          >
-            {copied ? "Copied!" : "Copy"}
-          </Button>
-          {result?.type !== "success" && (
-            <Button
-              onClick={handleSend}
-              loading={sending}
-              disabled={!message.trim() || !lead.phone}
-            >
-              Send
+        <div className="flex justify-between items-center pt-1">
+          <div>
+            {!markedContacted && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const tpl = templates.find((t) => t._id === selectedTemplateId);
+                  onMarkContacted(tpl?._id, tpl?.name);
+                  setMarkedContacted(true);
+                }}
+              >
+                Mark Contacted
+              </Button>
+            )}
+            {markedContacted && (
+              <span className="text-xs text-success font-medium">Marked as contacted</span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={onClose}>
+              {result?.type === "success" ? "Done" : "Cancel"}
             </Button>
-          )}
+            <Button
+              variant="secondary"
+              onClick={handleCopy}
+              disabled={!message.trim()}
+            >
+              {copied ? "Copied!" : "Copy"}
+            </Button>
+            {result?.type !== "success" && (
+              <Button
+                onClick={handleSend}
+                loading={sending}
+                disabled={!message.trim() || !lead.phone}
+              >
+                Send
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </Modal>

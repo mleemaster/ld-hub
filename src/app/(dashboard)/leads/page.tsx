@@ -432,6 +432,57 @@ export default function LeadsPage() {
     }
   }
 
+  async function handleBulkExpandStates() {
+    const STATE_MAP: Record<string, string> = {
+      AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
+      CO: "Colorado", CT: "Connecticut", DE: "Delaware", FL: "Florida", GA: "Georgia",
+      HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa",
+      KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland",
+      MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri",
+      MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey",
+      NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio",
+      OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina",
+      SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont",
+      VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
+      DC: "District of Columbia",
+    };
+
+    const ids = [...selectedIds];
+    const updates: { id: string; state: string }[] = [];
+    for (const id of ids) {
+      const lead = leads.find((l) => l._id === id);
+      if (!lead?.state) continue;
+      const full = STATE_MAP[lead.state.trim().toUpperCase()];
+      if (full && full !== lead.state) updates.push({ id, state: full });
+    }
+    if (updates.length === 0) return;
+
+    const prev = leads.map((l) => ({ ...l }));
+    setLeads((current) =>
+      current.map((l) => {
+        const match = updates.find((u) => u.id === l._id);
+        return match ? { ...l, state: match.state } : l;
+      })
+    );
+    setSelectedIds(new Set());
+
+    try {
+      await Promise.all(
+        updates.map(({ id, state }) =>
+          fetch(`/api/leads/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ state }),
+          })
+        )
+      );
+      fetchLeads();
+    } catch {
+      setLeads(prev);
+      fetchLeads();
+    }
+  }
+
   async function handleBulkUpdate(update: Record<string, string>) {
     const ids = [...selectedIds];
     const prev = leads.map((l) => ({ ...l }));
@@ -799,6 +850,11 @@ export default function LeadsPage() {
               }}
             />
           </div>
+          <div className="flex gap-2 pt-1">
+            <Button variant="secondary" size="sm" onClick={handleBulkExpandStates}>
+              Expand State Abbreviations
+            </Button>
+          </div>
         </div>
       )}
 
@@ -886,6 +942,7 @@ export default function LeadsPage() {
           onClose={() => setMessagingLead(null)}
           lead={messagingLead}
           onSent={(templateId, templateName) => handleMarkContacted(messagingLead._id, templateId, templateName)}
+          onMarkContacted={(templateId, templateName) => handleMarkContacted(messagingLead._id, templateId, templateName)}
         />
       )}
 

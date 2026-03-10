@@ -1,15 +1,13 @@
 /*
- * OpenClaw page — AI employee visibility and control.
- * Live heartbeat status, task queue, message templates, activity feed, cost tracking.
+ * OpenClaw page — AI agent visibility and control.
+ * Live heartbeat status, task queue, API spend, cost tracking.
  * Polls heartbeat every 60s to keep status indicator current.
  */
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 import { formatCurrency } from "@/lib/utils";
-import ActivityFeed from "@/components/openclaw/ActivityFeed";
 import TaskQueue from "@/components/openclaw/TaskQueue";
-import TemplateManager from "@/components/openclaw/TemplateManager";
 import CostTracking from "@/components/openclaw/CostTracking";
 
 interface HeartbeatStatus {
@@ -18,23 +16,13 @@ interface HeartbeatStatus {
   currentTaskSummary: string | null;
 }
 
-interface Summary {
-  leadsContactedToday: number;
-  followUpsToday: number;
-  apiSpendThisMonth: number;
-}
-
 export default function OpenClawPage() {
   const [status, setStatus] = useState<HeartbeatStatus>({
     connected: false,
     lastHeartbeat: null,
     currentTaskSummary: null,
   });
-  const [summary, setSummary] = useState<Summary>({
-    leadsContactedToday: 0,
-    followUpsToday: 0,
-    apiSpendThisMonth: 0,
-  });
+  const [apiSpend, setApiSpend] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -45,11 +33,7 @@ export default function OpenClawPage() {
     ])
       .then(([heartbeatData, summaryData]) => {
         setStatus(heartbeatData);
-        setSummary({
-          leadsContactedToday: summaryData.leadsContactedToday ?? 0,
-          followUpsToday: summaryData.followUpsToday ?? 0,
-          apiSpendThisMonth: summaryData.apiSpendThisMonth ?? 0,
-        });
+        setApiSpend(summaryData.apiSpendThisMonth ?? 0);
       })
       .catch(() => {})
       .finally(() => setLoaded(true));
@@ -70,8 +54,7 @@ export default function OpenClawPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold text-text-primary">OpenClaw</h1>
 
-      {/* Top row — status, messages, spend */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="rounded-2xl border border-border bg-surface-secondary p-6">
           <div className="flex items-center gap-2 mb-4">
             <div
@@ -95,45 +78,17 @@ export default function OpenClawPage() {
 
         <div className="rounded-2xl border border-border bg-surface-secondary p-6">
           <h3 className="text-sm font-medium text-text-secondary mb-2">
-            Outreach Today
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-3xl font-semibold text-text-primary">
-                {loaded ? summary.leadsContactedToday : "--"}
-              </p>
-              <p className="text-xs text-text-tertiary mt-1">Leads Contacted</p>
-            </div>
-            <div>
-              <p className="text-3xl font-semibold text-text-primary">
-                {loaded ? summary.followUpsToday : "--"}
-              </p>
-              <p className="text-xs text-text-tertiary mt-1">Follow Ups</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-surface-secondary p-6">
-          <h3 className="text-sm font-medium text-text-secondary mb-2">
             API Spend
           </h3>
           <p className="text-3xl font-semibold text-text-primary">
-            {loaded ? formatCurrency(summary.apiSpendThisMonth) : "$0.00"}
+            {loaded ? formatCurrency(apiSpend) : "$0.00"}
           </p>
           <p className="text-xs text-text-tertiary mt-1">This month</p>
         </div>
       </div>
 
-      {/* Middle row — activity feed + task queue */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ActivityFeed />
-        <TaskQueue />
-      </div>
+      <TaskQueue />
 
-      {/* Message templates */}
-      <TemplateManager />
-
-      {/* Cost tracking */}
       <CostTracking />
     </div>
   );
