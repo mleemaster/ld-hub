@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Lead } from "@/models/Lead";
 import { Activity } from "@/models/Activity";
+import { OpenClawActivity } from "@/models/OpenClawActivity";
 
 export async function GET(
   _request: NextRequest,
@@ -43,6 +44,8 @@ export async function PUT(
     const lead = await Lead.findByIdAndUpdate(id, body, { new: true });
 
     try {
+      const isFirstContact = body.status && existing.status === "New" && body.status !== "New";
+
       if (body.status && body.status !== existing.status) {
         await Activity.create({
           type: "lead_status_changed",
@@ -60,11 +63,17 @@ export async function PUT(
         : null;
 
       if (newContactDate && newContactDate !== existingContactDate) {
+        const activityType = isFirstContact ? "lead_contacted" : "follow_up_sent";
         await Activity.create({
           type: "lead_contacted",
           description: `Contacted ${existing.name}`,
           relatedEntityType: "lead",
           relatedEntityId: existing._id,
+        });
+        await OpenClawActivity.create({
+          type: activityType,
+          details: `${isFirstContact ? "Contacted" : "Followed up with"} ${existing.name}`,
+          relatedLeadId: existing._id,
         });
       }
     } catch {

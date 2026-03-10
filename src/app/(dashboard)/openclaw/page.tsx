@@ -19,10 +19,9 @@ interface HeartbeatStatus {
 }
 
 interface Summary {
-  messagesSentToday: number;
+  leadsContactedToday: number;
+  followUpsToday: number;
   apiSpendThisMonth: number;
-  totalMessagesSent: number;
-  uniqueLeadsContacted: number;
 }
 
 export default function OpenClawPage() {
@@ -32,10 +31,9 @@ export default function OpenClawPage() {
     currentTaskSummary: null,
   });
   const [summary, setSummary] = useState<Summary>({
-    messagesSentToday: 0,
+    leadsContactedToday: 0,
+    followUpsToday: 0,
     apiSpendThisMonth: 0,
-    totalMessagesSent: 0,
-    uniqueLeadsContacted: 0,
   });
   const [loaded, setLoaded] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -48,10 +46,9 @@ export default function OpenClawPage() {
       .then(([heartbeatData, summaryData]) => {
         setStatus(heartbeatData);
         setSummary({
-          messagesSentToday: summaryData.messagesSentToday ?? 0,
+          leadsContactedToday: summaryData.leadsContactedToday ?? 0,
+          followUpsToday: summaryData.followUpsToday ?? 0,
           apiSpendThisMonth: summaryData.apiSpendThisMonth ?? 0,
-          totalMessagesSent: summaryData.totalMessagesSent ?? 0,
-          uniqueLeadsContacted: summaryData.uniqueLeadsContacted ?? 0,
         });
       })
       .catch(() => {})
@@ -98,24 +95,20 @@ export default function OpenClawPage() {
 
         <div className="rounded-2xl border border-border bg-surface-secondary p-6">
           <h3 className="text-sm font-medium text-text-secondary mb-2">
-            Messages Sent
+            Outreach Today
           </h3>
-          <p className="text-3xl font-semibold text-text-primary">
-            {loaded ? summary.messagesSentToday : "--"}
-          </p>
-          <p className="text-xs text-text-tertiary mt-1">Today</p>
-          <div className="mt-3 pt-3 border-t border-border grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <p className="text-lg font-semibold text-text-primary">
-                {loaded ? summary.totalMessagesSent.toLocaleString() : "--"}
+              <p className="text-3xl font-semibold text-text-primary">
+                {loaded ? summary.leadsContactedToday : "--"}
               </p>
-              <p className="text-xs text-text-tertiary">Total Sent</p>
+              <p className="text-xs text-text-tertiary mt-1">Leads Contacted</p>
             </div>
             <div>
-              <p className="text-lg font-semibold text-text-primary">
-                {loaded ? summary.uniqueLeadsContacted.toLocaleString() : "--"}
+              <p className="text-3xl font-semibold text-text-primary">
+                {loaded ? summary.followUpsToday : "--"}
               </p>
-              <p className="text-xs text-text-tertiary">Leads Contacted</p>
+              <p className="text-xs text-text-tertiary mt-1">Follow Ups</p>
             </div>
           </div>
         </div>

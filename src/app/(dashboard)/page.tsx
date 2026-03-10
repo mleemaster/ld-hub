@@ -121,7 +121,7 @@ async function getOpenClawStats() {
     const [statusDoc, messagesSentToday, leadsScrapedToday] = await Promise.all([
       OpenClawStatus.findOne().lean(),
       OpenClawActivity.countDocuments({
-        type: { $in: ["message_sent", "follow_up_sent"] },
+        type: { $in: ["message_sent", "follow_up_sent", "lead_contacted"] },
         createdAt: { $gte: startOfDay },
       }),
       OpenClawActivity.countDocuments({

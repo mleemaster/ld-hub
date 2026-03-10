@@ -45,17 +45,21 @@ export async function GET() {
     const monthStart = startOfMonth();
 
     const [
-      messagesSentToday,
+      leadsContactedToday,
+      followUpsToday,
       leadsScrapedToday,
       costThisWeekAgg,
       costThisMonthAgg,
       totalCostAgg,
       totalLeadActivities,
       totalMessageActivities,
-      uniqueLeadsContactedAgg,
     ] = await Promise.all([
       OpenClawActivity.countDocuments({
-        type: { $in: ["message_sent", "follow_up_sent"] },
+        type: "lead_contacted",
+        createdAt: { $gte: today },
+      }),
+      OpenClawActivity.countDocuments({
+        type: "follow_up_sent",
         createdAt: { $gte: today },
       }),
       OpenClawActivity.countDocuments({
@@ -78,13 +82,8 @@ export async function GET() {
         type: { $in: ["lead_scraped", "lead_added"] },
       }),
       OpenClawActivity.countDocuments({
-        type: { $in: ["message_sent", "follow_up_sent"] },
+        type: { $in: ["message_sent", "follow_up_sent", "lead_contacted"] },
       }),
-      OpenClawActivity.aggregate([
-        { $match: { type: { $in: ["message_sent", "follow_up_sent"] }, relatedLeadId: { $exists: true, $ne: null } } },
-        { $group: { _id: "$relatedLeadId" } },
-        { $count: "total" },
-      ]),
     ]);
 
     const costThisWeek = costThisWeekAgg[0]?.total || 0;
@@ -95,18 +94,16 @@ export async function GET() {
       totalLeadActivities > 0 ? totalCost / totalLeadActivities : 0;
     const costPerMessage =
       totalMessageActivities > 0 ? totalCost / totalMessageActivities : 0;
-    const uniqueLeadsContacted = uniqueLeadsContactedAgg[0]?.total || 0;
 
     return NextResponse.json({
-      messagesSentToday,
+      leadsContactedToday,
+      followUpsToday,
       leadsScrapedToday,
       costThisWeek,
       costThisMonth,
       costPerLead,
       costPerMessage,
       apiSpendThisMonth: costThisMonth,
-      totalMessagesSent: totalMessageActivities,
-      uniqueLeadsContacted,
     });
   } catch {
     return NextResponse.json(
