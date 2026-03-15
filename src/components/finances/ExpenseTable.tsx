@@ -4,6 +4,7 @@
  */
 "use client";
 
+import { useState } from "react";
 import {
   Table,
   TableHeader,
@@ -14,6 +15,8 @@ import {
 } from "@/components/ui/Table";
 import Badge from "@/components/ui/Badge";
 import type { Expense } from "@/lib/finance-types";
+
+const DEFAULT_VISIBLE = 6;
 
 interface ExpenseTableProps {
   expenses: Expense[];
@@ -45,6 +48,8 @@ function getTypeLabel(expense: Expense): string {
 }
 
 export default function ExpenseTable({ expenses, onEdit }: ExpenseTableProps) {
+  const [expanded, setExpanded] = useState(false);
+
   if (expenses.length === 0) {
     return (
       <p className="text-sm text-text-tertiary py-6 text-center">
@@ -52,6 +57,9 @@ export default function ExpenseTable({ expenses, onEdit }: ExpenseTableProps) {
       </p>
     );
   }
+
+  const hasMore = expenses.length > DEFAULT_VISIBLE;
+  const visible = expanded ? expenses : expenses.slice(0, DEFAULT_VISIBLE);
 
   return (
     <>
@@ -70,7 +78,7 @@ export default function ExpenseTable({ expenses, onEdit }: ExpenseTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {expenses.map((expense) => (
+            {visible.map((expense) => (
               <TableRow key={expense._id}>
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -115,7 +123,7 @@ export default function ExpenseTable({ expenses, onEdit }: ExpenseTableProps) {
 
       {/* Mobile cards */}
       <div className="md:hidden space-y-2">
-        {expenses.map((expense) => (
+        {visible.map((expense) => (
           <div
             key={expense._id}
             onClick={() => onEdit(expense)}
@@ -147,6 +155,17 @@ export default function ExpenseTable({ expenses, onEdit }: ExpenseTableProps) {
           </div>
         ))}
       </div>
+
+      {hasMore && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="w-full text-center text-sm text-text-secondary hover:text-text-primary transition-colors py-2 cursor-pointer"
+        >
+          {expanded
+            ? "Show less"
+            : `Show all ${expenses.length} expenses`}
+        </button>
+      )}
     </>
   );
 }
