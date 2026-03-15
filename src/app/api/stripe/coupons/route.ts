@@ -20,6 +20,7 @@ export async function GET() {
         return {
           id: coupon.id,
           name: coupon.name,
+          leadName: coupon.metadata?.leadName || null,
           percentOff: coupon.percent_off,
           amountOff: coupon.amount_off ? coupon.amount_off / 100 : null,
           currency: coupon.currency,

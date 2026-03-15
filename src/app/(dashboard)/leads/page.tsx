@@ -543,6 +543,7 @@ export default function LeadsPage() {
           planTier: paymentLinkPlan,
           email: paymentLinkLead.email || undefined,
           leadId: paymentLinkLead._id,
+          leadName: paymentLinkLead.name,
           ...(paymentLinkDiscount.enabled && paymentLinkDiscount.value > 0 && {
             discount: {
               type: paymentLinkDiscount.type,

@@ -19,10 +19,11 @@ interface DiscountInput {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { planTier, email, leadId, discount } = body as {
+    const { planTier, email, leadId, leadName, discount } = body as {
       planTier: string;
       email?: string;
       leadId?: string;
+      leadName?: string;
       discount?: DiscountInput;
     };
 
@@ -67,6 +68,11 @@ export async function POST(request: NextRequest) {
       const couponParams: Record<string, unknown> = {
         max_redemptions: 1,
         name: `${planTier} – ${discount.value}${discount.type === "percent" ? "%" : "$"} off ${discount.appliesTo}`,
+        metadata: {
+          ...(leadId && { leadId }),
+          ...(leadName && { leadName }),
+          planTier,
+        },
       };
 
       if (discount.type === "percent") {
@@ -92,6 +98,7 @@ export async function POST(request: NextRequest) {
       line_items: lineItems,
       metadata: {
         ...(leadId && { leadId }),
+        ...(leadName && { leadName }),
         planTier,
       },
       ...(promoCode && { allow_promotion_codes: true }),

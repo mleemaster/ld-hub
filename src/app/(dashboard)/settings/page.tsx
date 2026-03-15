@@ -30,6 +30,7 @@ interface PaymentLinkItem {
   active: boolean;
   planTier: string | null;
   leadId: string | null;
+  leadName: string | null;
 }
 
 interface PromoCode {
@@ -42,6 +43,7 @@ interface PromoCode {
 interface CouponItem {
   id: string;
   name: string | null;
+  leadName: string | null;
   percentOff: number | null;
   amountOff: number | null;
   currency: string | null;
@@ -381,6 +383,7 @@ export default function SettingsPage() {
                           <TableHeader>
                             <TableRow>
                               <TableHead>Plan</TableHead>
+                              <TableHead>Client</TableHead>
                               <TableHead>Link</TableHead>
                               <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -390,6 +393,9 @@ export default function SettingsPage() {
                               <TableRow key={link.id}>
                                 <TableCell>
                                   <span className="font-medium">{link.planTier || "—"}</span>
+                                </TableCell>
+                                <TableCell>
+                                  <span className="text-sm text-text-secondary">{link.leadName || "—"}</span>
                                 </TableCell>
                                 <TableCell>
                                   <a
@@ -441,6 +447,7 @@ export default function SettingsPage() {
                               <TableHeader>
                                 <TableRow>
                                   <TableHead>Plan</TableHead>
+                                  <TableHead>Client</TableHead>
                                   <TableHead>Link</TableHead>
                                   <TableHead className="text-right">Status</TableHead>
                                 </TableRow>
@@ -450,6 +457,9 @@ export default function SettingsPage() {
                                   <TableRow key={link.id}>
                                     <TableCell>
                                       <span className="font-medium">{link.planTier || "—"}</span>
+                                    </TableCell>
+                                    <TableCell>
+                                      <span className="text-sm text-text-tertiary">{link.leadName || "—"}</span>
                                     </TableCell>
                                     <TableCell>
                                       <span className="text-xs font-mono text-text-tertiary truncate block max-w-[200px]">
@@ -491,6 +501,7 @@ export default function SettingsPage() {
                           <TableHeader>
                             <TableRow>
                               <TableHead>Name</TableHead>
+                              <TableHead>Client</TableHead>
                               <TableHead>Discount</TableHead>
                               <TableHead>Promo Code</TableHead>
                               <TableHead>Redeemed</TableHead>
@@ -502,6 +513,9 @@ export default function SettingsPage() {
                               <TableRow key={coupon.id}>
                                 <TableCell>
                                   <span className="font-medium">{coupon.name || coupon.id}</span>
+                                </TableCell>
+                                <TableCell>
+                                  <span className="text-sm text-text-secondary">{coupon.leadName || "—"}</span>
                                 </TableCell>
                                 <TableCell>
                                   {coupon.percentOff
@@ -563,6 +577,7 @@ export default function SettingsPage() {
                               <TableHeader>
                                 <TableRow>
                                   <TableHead>Name</TableHead>
+                                  <TableHead>Client</TableHead>
                                   <TableHead>Discount</TableHead>
                                   <TableHead>Promo Code</TableHead>
                                   <TableHead className="text-right">Redeemed</TableHead>
@@ -573,6 +588,9 @@ export default function SettingsPage() {
                                   <TableRow key={coupon.id}>
                                     <TableCell>
                                       <span className="font-medium">{coupon.name || coupon.id}</span>
+                                    </TableCell>
+                                    <TableCell>
+                                      <span className="text-sm text-text-tertiary">{coupon.leadName || "—"}</span>
                                     </TableCell>
                                     <TableCell>
                                       {coupon.percentOff

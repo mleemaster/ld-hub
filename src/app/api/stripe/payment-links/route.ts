@@ -16,6 +16,7 @@ export async function GET() {
       active: link.active,
       planTier: link.metadata?.planTier || null,
       leadId: link.metadata?.leadId || null,
+      leadName: link.metadata?.leadName || null,
     }));
 
     return NextResponse.json(items);
