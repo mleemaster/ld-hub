@@ -21,11 +21,19 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     const source = searchParams.get("source");
     const industry = searchParams.get("industry");
+    const unlinked = searchParams.get("unlinked");
 
-    const filter: Record<string, string> = {};
+    const filter: Record<string, unknown> = {};
     if (status) filter.status = status;
     if (source) filter.source = source;
     if (industry) filter.industry = industry;
+
+    if (unlinked === "true") {
+      const linkedLeadIds = await Client.distinct("leadId", { leadId: { $ne: null } });
+      if (linkedLeadIds.length > 0) {
+        filter._id = { $nin: linkedLeadIds };
+      }
+    }
 
     const leads = await Lead.find(filter).sort({ lastContactedDate: -1 });
     return NextResponse.json(leads);

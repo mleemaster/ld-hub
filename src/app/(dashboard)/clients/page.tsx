@@ -205,6 +205,19 @@ export default function ClientsPage() {
     }
   }
 
+  async function handleLinkLead(clientId: string, leadId: string) {
+    const res = await fetch(`/api/clients/${clientId}/link-lead`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ leadId }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setSelectedClient(updated);
+      fetchClients();
+    }
+  }
+
   async function handleBulkStatusUpdate(status: string) {
     const ids = [...selectedIds];
     const prev = clients.map((c) => ({ ...c }));
@@ -365,6 +378,7 @@ export default function ClientsPage() {
             onUpdate={handleUpdateClient}
             onDelete={handleDeleteClient}
             submitting={submitting}
+            onLinkLead={(leadId) => handleLinkLead(selectedClient._id, leadId)}
           />
         )}
       </SlideOver>

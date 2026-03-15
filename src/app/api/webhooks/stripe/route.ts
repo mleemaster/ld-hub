@@ -72,6 +72,84 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ received: true });
 }
 
+/* ── Helpers ──────────────────────────────────────────────── */
+
+async function backfillPayments(stripeCustomerId: string, clientId: unknown, clientName: string) {
+  try {
+    const invoices = await stripe.invoices.list({
+      customer: stripeCustomerId,
+      status: "paid",
+      limit: 10,
+    });
+
+    for (const inv of invoices.data) {
+      const amount = (inv.amount_paid ?? 0) / 100;
+      try {
+        await Payment.updateOne(
+          { stripeInvoiceId: inv.id },
+          {
+            $setOnInsert: {
+              clientId,
+              clientName,
+              amount,
+              date: inv.status_transitions?.paid_at
+                ? new Date(inv.status_transitions.paid_at * 1000)
+                : new Date(),
+              stripeInvoiceId: inv.id,
+            },
+          },
+          { upsert: true }
+        );
+      } catch (err) {
+        console.error(`[Stripe Webhook] backfill payment ${inv.id}:`, err);
+      }
+
+      // Track Stripe processing fee
+      try {
+        const fullInvoice = await stripe.invoices.retrieve(inv.id, {
+          expand: ["payments.data.payment.payment_intent"],
+        });
+        const payment = fullInvoice.payments?.data?.[0];
+        const pi = payment?.payment?.payment_intent;
+        const piId = typeof pi === "string" ? pi : pi?.id;
+
+        if (piId) {
+          const piObj = typeof pi === "string"
+            ? await stripe.paymentIntents.retrieve(pi, { expand: ["latest_charge.balance_transaction"] })
+            : await stripe.paymentIntents.retrieve(piId, { expand: ["latest_charge.balance_transaction"] });
+
+          const charge = piObj.latest_charge;
+          if (charge && typeof charge !== "string") {
+            const bt = charge.balance_transaction;
+            if (bt && typeof bt !== "string") {
+              const feeAmount = extractStripeFee(bt);
+              if (feeAmount > 0) {
+                const existing = await Expense.findOne({ name: `Stripe fee — Invoice ${inv.id}` });
+                if (!existing) {
+                  await Expense.create({
+                    name: `Stripe fee — Invoice ${inv.id}`,
+                    amount: feeAmount,
+                    type: "one-time",
+                    category: "Stripe Fees",
+                    date: inv.status_transitions?.paid_at
+                      ? new Date(inv.status_transitions.paid_at * 1000)
+                      : new Date(),
+                    autoTracked: true,
+                  });
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error(`[Stripe Webhook] backfill fee ${inv.id}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error("[Stripe Webhook] backfillPayments failed:", err);
+  }
+}
+
 /* ── Event handlers ───────────────────────────────────────── */
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
@@ -91,6 +169,23 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     expand: ["line_items.data.price"],
   });
 
+  // Retrieve the subscription to get nextBillingDate
+  let nextBillingDate: Date | undefined;
+  const subId = typeof fullSession.subscription === "string"
+    ? fullSession.subscription
+    : fullSession.subscription?.id;
+  if (subId) {
+    try {
+      const sub = await stripe.subscriptions.retrieve(subId);
+      const subItem = sub.items.data[0];
+      if (subItem?.current_period_end) {
+        nextBillingDate = new Date(subItem.current_period_end * 1000);
+      }
+    } catch {
+      // Non-blocking — subscription.created will catch it if this fails
+    }
+  }
+
   // Determine plan tier and PPC from line items
   let planTier: string = "Landing Page";
   let ppcClient = false;
@@ -103,7 +198,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     if (!priceId) continue;
 
     if (isSetupPrice(priceId)) {
-      setupFeeAmount = (item.price?.unit_amount ?? 0) / 100;
+      setupFeeAmount = (item.amount_total ?? 0) / 100;
       continue;
     }
 
@@ -145,10 +240,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     existingByEmail.ppcManagementFee = ppcManagementFee;
     existingByEmail.setupFeeAmount = setupFeeAmount;
     existingByEmail.startDate = new Date();
+    if (nextBillingDate) existingByEmail.nextBillingDate = nextBillingDate;
     if (!existingByEmail.intakeForm && lead?.intakeForm) {
       existingByEmail.intakeForm = lead.intakeForm;
     }
     await existingByEmail.save();
+    await backfillPayments(customerId, existingByEmail._id, existingByEmail.name);
 
     console.log(`[Stripe Webhook] Linked Stripe customer ${customerId} to existing client ${existingByEmail.name}`);
 
@@ -185,11 +282,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     stripeCustomerId: customerId,
     projectStatus: "Awaiting Design",
     startDate: new Date(),
+    nextBillingDate: nextBillingDate || undefined,
     leadId: lead?._id || undefined,
     intakeForm: lead?.intakeForm || undefined,
   };
 
   const client = await Client.create(clientData);
+  await backfillPayments(customerId, client._id, client.name);
 
   try {
     await Activity.create({

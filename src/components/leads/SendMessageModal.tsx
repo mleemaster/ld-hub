@@ -190,7 +190,7 @@ export default function SendMessageModal({ open, onClose, lead, onSent, onMarkCo
                 onClick={() => {
                   const tpl = templates.find((t) => t._id === selectedTemplateId);
                   onMarkContacted(tpl?._id, tpl?.name);
-                  setMarkedContacted(true);
+                  onClose();
                 }}
               >
                 Mark Contacted

@@ -16,6 +16,13 @@ import type { ActivityRecord } from "@/lib/lead-types";
 import type { Expense } from "@/lib/finance-types";
 import { parseLocalDate, formatCurrency } from "@/lib/utils";
 
+interface UnlinkedLead {
+  _id: string;
+  name: string;
+  businessName?: string;
+  email?: string;
+}
+
 interface ClientDetailPanelProps {
   client: Client;
   onStatusChange: (clientId: string, newStatus: string) => void;
@@ -23,6 +30,7 @@ interface ClientDetailPanelProps {
   onDelete: () => void;
   submitting: boolean;
   initialEditing?: boolean;
+  onLinkLead?: (leadId: string) => Promise<void>;
 }
 
 function formatDate(dateStr?: string): string {
@@ -118,6 +126,7 @@ export default function ClientDetailPanel({
   onDelete,
   submitting,
   initialEditing = false,
+  onLinkLead,
 }: ClientDetailPanelProps) {
   const [editing, setEditing] = useState(initialEditing);
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
@@ -126,6 +135,11 @@ export default function ClientDetailPanel({
   const [expensesOpen, setExpensesOpen] = useState(false);
   const [clientExpenses, setClientExpenses] = useState<Expense[]>([]);
   const [loadingExpenses, setLoadingExpenses] = useState(true);
+  const [linkLeadOpen, setLinkLeadOpen] = useState(false);
+  const [unlinkedLeads, setUnlinkedLeads] = useState<UnlinkedLead[]>([]);
+  const [loadingLeads, setLoadingLeads] = useState(false);
+  const [leadSearch, setLeadSearch] = useState("");
+  const [linkingLeadId, setLinkingLeadId] = useState<string | null>(null);
 
   useEffect(() => {
     setEditing(initialEditing);
@@ -169,6 +183,42 @@ export default function ClientDetailPanel({
   useEffect(() => {
     fetchActivities();
   }, [fetchActivities]);
+
+  async function handleOpenLinkLead() {
+    setLinkLeadOpen(true);
+    setLoadingLeads(true);
+    setLeadSearch("");
+    try {
+      const res = await fetch("/api/leads?unlinked=true");
+      if (res.ok) setUnlinkedLeads(await res.json());
+    } catch {
+      // Silent fail
+    } finally {
+      setLoadingLeads(false);
+    }
+  }
+
+  async function handleLinkLead(leadId: string) {
+    if (!onLinkLead) return;
+    setLinkingLeadId(leadId);
+    try {
+      await onLinkLead(leadId);
+      setLinkLeadOpen(false);
+      fetchActivities();
+    } finally {
+      setLinkingLeadId(null);
+    }
+  }
+
+  const filteredLeads = unlinkedLeads.filter((l) => {
+    if (!leadSearch) return true;
+    const q = leadSearch.toLowerCase();
+    return (
+      l.name?.toLowerCase().includes(q) ||
+      l.businessName?.toLowerCase().includes(q) ||
+      l.email?.toLowerCase().includes(q)
+    );
+  });
 
   function handleStatusChange(newStatus: string) {
     onStatusChange(client._id, newStatus);
@@ -450,6 +500,70 @@ export default function ClientDetailPanel({
           {intakeOpen && (
             <div className="px-4 pb-4 pt-1 border-t border-border">
               <IntakeFormSection intakeForm={client.intakeForm!} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Link to Lead */}
+      {!client.leadId && onLinkLead && (
+        <div className="border border-border rounded-xl overflow-hidden">
+          <button
+            type="button"
+            onClick={() => linkLeadOpen ? setLinkLeadOpen(false) : handleOpenLinkLead()}
+            className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
+          >
+            <span>Link to Lead</span>
+            <svg
+              className={`w-4 h-4 text-text-tertiary transition-transform ${linkLeadOpen ? "rotate-180" : ""}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+          {linkLeadOpen && (
+            <div className="px-4 pb-4 pt-1 border-t border-border space-y-2">
+              <input
+                type="text"
+                placeholder="Search leads..."
+                value={leadSearch}
+                onChange={(e) => setLeadSearch(e.target.value)}
+                className="w-full rounded-lg border border-border bg-surface-primary px-3 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+              {loadingLeads ? (
+                <div className="flex justify-center py-4">
+                  <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : filteredLeads.length === 0 ? (
+                <p className="text-sm text-text-tertiary text-center py-3">No unlinked leads found</p>
+              ) : (
+                <div className="max-h-48 overflow-y-auto space-y-1">
+                  {filteredLeads.map((lead) => (
+                    <div
+                      key={lead._id}
+                      className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-surface-secondary"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-text-primary truncate">{lead.name}</p>
+                        {lead.businessName && (
+                          <p className="text-xs text-text-tertiary truncate">{lead.businessName}</p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleLinkLead(lead._id)}
+                        disabled={linkingLeadId === lead._id}
+                        className="ml-2 shrink-0 text-xs font-medium text-accent hover:text-accent/80 disabled:opacity-50 cursor-pointer"
+                      >
+                        {linkingLeadId === lead._id ? "Linking..." : "Link"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
