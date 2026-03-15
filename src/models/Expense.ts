@@ -26,6 +26,7 @@ export interface IExpense extends Document {
   autoTracked: boolean;
   clientId?: mongoose.Types.ObjectId;
   clientName?: string;
+  stripeInvoiceId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -41,6 +42,7 @@ const ExpenseSchema = new Schema<IExpense>(
     autoTracked: { type: Boolean, default: false },
     clientId: { type: Schema.Types.ObjectId, ref: "Client", default: null },
     clientName: { type: String, default: null },
+    stripeInvoiceId: { type: String, default: null, unique: true, sparse: true },
   },
   { timestamps: true }
 );

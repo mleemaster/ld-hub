@@ -109,6 +109,8 @@ export default function FinancesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/clients")
@@ -240,6 +242,23 @@ export default function FinancesPage() {
       // Silent fail
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleSyncStripeFees() {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch("/api/expenses/sync-stripe-fees", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        setSyncResult(`Synced ${data.synced} fee${data.synced !== 1 ? "s" : ""}${data.errors ? ` (${data.errors} error${data.errors !== 1 ? "s" : ""})` : ""}`);
+        await Promise.all([fetchSummary(), fetchExpenses()]);
+      }
+    } catch {
+      setSyncResult("Sync failed");
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -469,6 +488,17 @@ export default function FinancesPage() {
               placeholder="All Categories"
               className="w-44"
             />
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleSyncStripeFees}
+              disabled={syncing}
+            >
+              {syncing ? "Syncing…" : "Sync Stripe Fees"}
+            </Button>
+            {syncResult && (
+              <span className="text-xs text-text-secondary">{syncResult}</span>
+            )}
             <Button size="sm" onClick={() => setShowExpenseModal(true)}>
               Add Expense
             </Button>

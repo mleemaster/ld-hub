@@ -164,12 +164,10 @@ export async function POST(
               if (bt && typeof bt !== "string") {
                 const feeAmount = extractStripeFee(bt);
                 if (feeAmount > 0) {
-                  const existing = await Expense.findOne({
-                    name: `Stripe fee — Invoice ${inv.id}`,
-                  });
+                  const existing = await Expense.findOne({ stripeInvoiceId: inv.id });
                   if (!existing) {
                     await Expense.create({
-                      name: `Stripe fee — Invoice ${inv.id}`,
+                      name: `Stripe Fee - ${client.name}`,
                       amount: feeAmount,
                       type: "one-time",
                       category: "Stripe Fees",
@@ -177,6 +175,9 @@ export async function POST(
                         ? new Date(inv.status_transitions.paid_at * 1000)
                         : new Date(),
                       autoTracked: true,
+                      stripeInvoiceId: inv.id,
+                      clientId: client._id,
+                      clientName: client.name,
                     });
                   }
                 }
