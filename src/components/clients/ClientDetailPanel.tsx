@@ -31,6 +31,7 @@ interface ClientDetailPanelProps {
   submitting: boolean;
   initialEditing?: boolean;
   onLinkLead?: (leadId: string) => Promise<void>;
+  onSyncStripe?: () => Promise<void>;
 }
 
 function formatDate(dateStr?: string): string {
@@ -127,6 +128,7 @@ export default function ClientDetailPanel({
   submitting,
   initialEditing = false,
   onLinkLead,
+  onSyncStripe,
 }: ClientDetailPanelProps) {
   const [editing, setEditing] = useState(initialEditing);
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
@@ -135,6 +137,7 @@ export default function ClientDetailPanel({
   const [expensesOpen, setExpensesOpen] = useState(false);
   const [clientExpenses, setClientExpenses] = useState<Expense[]>([]);
   const [loadingExpenses, setLoadingExpenses] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [linkLeadOpen, setLinkLeadOpen] = useState(false);
   const [unlinkedLeads, setUnlinkedLeads] = useState<UnlinkedLead[]>([]);
   const [loadingLeads, setLoadingLeads] = useState(false);
@@ -219,6 +222,18 @@ export default function ClientDetailPanel({
       l.email?.toLowerCase().includes(q)
     );
   });
+
+  async function handleSyncStripe() {
+    if (!onSyncStripe) return;
+    setSyncing(true);
+    try {
+      await onSyncStripe();
+      fetchActivities();
+      fetchExpenses();
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   function handleStatusChange(newStatus: string) {
     onStatusChange(client._id, newStatus);
@@ -416,6 +431,30 @@ export default function ClientDetailPanel({
           <dd className="text-sm text-text-primary mt-0.5">{formatDate(client.updatedAt)}</dd>
         </div>
       </div>
+
+      {/* Sync from Stripe */}
+      {isStripeManaged && onSyncStripe && (
+        <button
+          type="button"
+          onClick={handleSyncStripe}
+          disabled={syncing}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-accent hover:bg-accent/5 border border-accent/20 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+        >
+          {syncing ? (
+            <>
+              <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+              Syncing...
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182M21.015 4.356v4.992" />
+              </svg>
+              Sync from Stripe
+            </>
+          )}
+        </button>
+      )}
 
       {/* Client Expenses */}
       <div className="border border-border rounded-xl overflow-hidden">

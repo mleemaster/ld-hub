@@ -218,6 +218,17 @@ export default function ClientsPage() {
     }
   }
 
+  async function handleSyncStripe(clientId: string) {
+    const res = await fetch(`/api/clients/${clientId}/sync-stripe`, {
+      method: "POST",
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setSelectedClient(updated);
+      fetchClients();
+    }
+  }
+
   async function handleBulkStatusUpdate(status: string) {
     const ids = [...selectedIds];
     const prev = clients.map((c) => ({ ...c }));
@@ -379,6 +390,7 @@ export default function ClientsPage() {
             onDelete={handleDeleteClient}
             submitting={submitting}
             onLinkLead={(leadId) => handleLinkLead(selectedClient._id, leadId)}
+            onSyncStripe={() => handleSyncStripe(selectedClient._id)}
           />
         )}
       </SlideOver>
