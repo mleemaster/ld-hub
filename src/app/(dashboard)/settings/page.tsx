@@ -1,6 +1,6 @@
 /*
  * Settings page.
- * Manages dynamic lead sources: add, rename, delete with reassignment.
+ * Manages dynamic lead sources and Stripe payment links / coupons.
  */
 "use client";
 
@@ -24,6 +24,34 @@ interface Source {
   isDefault?: boolean;
 }
 
+interface PaymentLinkItem {
+  id: string;
+  url: string;
+  active: boolean;
+  planTier: string | null;
+  leadId: string | null;
+}
+
+interface PromoCode {
+  id: string;
+  code: string;
+  active: boolean;
+  timesRedeemed: number;
+}
+
+interface CouponItem {
+  id: string;
+  name: string | null;
+  percentOff: number | null;
+  amountOff: number | null;
+  currency: string | null;
+  maxRedemptions: number | null;
+  timesRedeemed: number;
+  valid: boolean;
+  created: number;
+  promoCodes: PromoCode[];
+}
+
 export default function SettingsPage() {
   const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +64,14 @@ export default function SettingsPage() {
 
   const [deleteSource, setDeleteSource] = useState<Source | null>(null);
   const [reassignTo, setReassignTo] = useState("");
+
+  const [paymentLinks, setPaymentLinks] = useState<PaymentLinkItem[]>([]);
+  const [coupons, setCoupons] = useState<CouponItem[]>([]);
+  const [stripeLoading, setStripeLoading] = useState(true);
+  const [showArchivedLinks, setShowArchivedLinks] = useState(false);
+  const [showArchivedCoupons, setShowArchivedCoupons] = useState(false);
+  const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
+  const [deletingCouponId, setDeletingCouponId] = useState<string | null>(null);
 
   async function fetchSources() {
     try {
@@ -50,8 +86,61 @@ export default function SettingsPage() {
     }
   }
 
+  async function fetchPaymentLinks() {
+    try {
+      const res = await fetch("/api/stripe/payment-links");
+      if (res.ok) setPaymentLinks(await res.json());
+    } catch {
+      // Silent fail
+    }
+  }
+
+  async function fetchCoupons() {
+    try {
+      const res = await fetch("/api/stripe/coupons");
+      if (res.ok) setCoupons(await res.json());
+    } catch {
+      // Silent fail
+    }
+  }
+
+  async function handleDeactivateLink(id: string) {
+    setDeactivatingId(id);
+    try {
+      const res = await fetch("/api/stripe/payment-links", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) await fetchPaymentLinks();
+    } catch {
+      // Silent fail
+    } finally {
+      setDeactivatingId(null);
+    }
+  }
+
+  async function handleDeleteCoupon(id: string) {
+    setDeletingCouponId(id);
+    try {
+      const res = await fetch("/api/stripe/coupons", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) await fetchCoupons();
+    } catch {
+      // Silent fail
+    } finally {
+      setDeletingCouponId(null);
+    }
+  }
+
   useEffect(() => {
     fetchSources();
+    Promise.all([fetchPaymentLinks(), fetchCoupons()]).finally(() =>
+      setStripeLoading(false)
+    );
   }, []);
 
   async function handleAdd() {
@@ -259,6 +348,267 @@ export default function SettingsPage() {
           </div>
         )}
       </Modal>
+
+      {/* Stripe Manager Section */}
+      <section className="space-y-6">
+        <div>
+          <h2 className="text-lg font-semibold text-text-primary">Payment Links & Coupons</h2>
+          <p className="text-sm text-text-secondary mt-1">
+            Manage active Stripe payment links and coupon codes.
+          </p>
+        </div>
+
+        {stripeLoading ? (
+          <div className="p-8 text-center">
+            <div className="inline-block w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <>
+            {/* Payment Links */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wider">Payment Links</h3>
+              {(() => {
+                const activeLinks = paymentLinks.filter((l) => l.active);
+                const archivedLinks = paymentLinks.filter((l) => !l.active);
+
+                return (
+                  <>
+                    {activeLinks.length === 0 ? (
+                      <p className="text-sm text-text-tertiary py-4">No active payment links.</p>
+                    ) : (
+                      <div className="rounded-2xl border border-border bg-surface overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Plan</TableHead>
+                              <TableHead>Link</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {activeLinks.map((link) => (
+                              <TableRow key={link.id}>
+                                <TableCell>
+                                  <span className="font-medium">{link.planTier || "—"}</span>
+                                </TableCell>
+                                <TableCell>
+                                  <a
+                                    href={link.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-accent hover:underline text-xs font-mono truncate block max-w-[200px]"
+                                  >
+                                    {link.url.replace("https://", "")}
+                                  </a>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Button
+                                    variant="danger"
+                                    size="sm"
+                                    loading={deactivatingId === link.id}
+                                    onClick={() => handleDeactivateLink(link.id)}
+                                  >
+                                    Deactivate
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+
+                    {archivedLinks.length > 0 && (
+                      <div>
+                        <button
+                          onClick={() => setShowArchivedLinks(!showArchivedLinks)}
+                          className="flex items-center gap-2 text-sm text-text-tertiary hover:text-text-secondary transition-colors cursor-pointer"
+                        >
+                          <svg
+                            className={`w-4 h-4 transition-transform ${showArchivedLinks ? "rotate-90" : ""}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={1.5}
+                            stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                          </svg>
+                          Archived ({archivedLinks.length})
+                        </button>
+                        {showArchivedLinks && (
+                          <div className="rounded-2xl border border-border bg-surface overflow-hidden mt-2 opacity-60">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Plan</TableHead>
+                                  <TableHead>Link</TableHead>
+                                  <TableHead className="text-right">Status</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {archivedLinks.map((link) => (
+                                  <TableRow key={link.id}>
+                                    <TableCell>
+                                      <span className="font-medium">{link.planTier || "—"}</span>
+                                    </TableCell>
+                                    <TableCell>
+                                      <span className="text-xs font-mono text-text-tertiary truncate block max-w-[200px]">
+                                        {link.url.replace("https://", "")}
+                                      </span>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <span className="text-xs px-2 py-0.5 rounded-full bg-surface-secondary text-text-tertiary">
+                                        Inactive
+                                      </span>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* Coupons */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wider">Coupons</h3>
+              {(() => {
+                const activeCoupons = coupons.filter((c) => c.valid);
+                const archivedCoupons = coupons.filter((c) => !c.valid);
+
+                return (
+                  <>
+                    {activeCoupons.length === 0 ? (
+                      <p className="text-sm text-text-tertiary py-4">No active coupons.</p>
+                    ) : (
+                      <div className="rounded-2xl border border-border bg-surface overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Name</TableHead>
+                              <TableHead>Discount</TableHead>
+                              <TableHead>Promo Code</TableHead>
+                              <TableHead>Redeemed</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {activeCoupons.map((coupon) => (
+                              <TableRow key={coupon.id}>
+                                <TableCell>
+                                  <span className="font-medium">{coupon.name || coupon.id}</span>
+                                </TableCell>
+                                <TableCell>
+                                  {coupon.percentOff
+                                    ? `${coupon.percentOff}% off`
+                                    : coupon.amountOff
+                                      ? `$${coupon.amountOff} off`
+                                      : "—"}
+                                </TableCell>
+                                <TableCell>
+                                  {coupon.promoCodes.length > 0 ? (
+                                    <span className="font-mono text-xs bg-surface-secondary px-2 py-0.5 rounded">
+                                      {coupon.promoCodes[0].code}
+                                    </span>
+                                  ) : (
+                                    <span className="text-text-tertiary">—</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-text-secondary">
+                                  {coupon.timesRedeemed}
+                                  {coupon.maxRedemptions ? ` / ${coupon.maxRedemptions}` : ""}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Button
+                                    variant="danger"
+                                    size="sm"
+                                    loading={deletingCouponId === coupon.id}
+                                    onClick={() => handleDeleteCoupon(coupon.id)}
+                                  >
+                                    Delete
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+
+                    {archivedCoupons.length > 0 && (
+                      <div>
+                        <button
+                          onClick={() => setShowArchivedCoupons(!showArchivedCoupons)}
+                          className="flex items-center gap-2 text-sm text-text-tertiary hover:text-text-secondary transition-colors cursor-pointer"
+                        >
+                          <svg
+                            className={`w-4 h-4 transition-transform ${showArchivedCoupons ? "rotate-90" : ""}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={1.5}
+                            stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                          </svg>
+                          Archived ({archivedCoupons.length})
+                        </button>
+                        {showArchivedCoupons && (
+                          <div className="rounded-2xl border border-border bg-surface overflow-hidden mt-2 opacity-60">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Name</TableHead>
+                                  <TableHead>Discount</TableHead>
+                                  <TableHead>Promo Code</TableHead>
+                                  <TableHead className="text-right">Redeemed</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {archivedCoupons.map((coupon) => (
+                                  <TableRow key={coupon.id}>
+                                    <TableCell>
+                                      <span className="font-medium">{coupon.name || coupon.id}</span>
+                                    </TableCell>
+                                    <TableCell>
+                                      {coupon.percentOff
+                                        ? `${coupon.percentOff}% off`
+                                        : coupon.amountOff
+                                          ? `$${coupon.amountOff} off`
+                                          : "—"}
+                                    </TableCell>
+                                    <TableCell>
+                                      {coupon.promoCodes.length > 0 ? (
+                                        <span className="font-mono text-xs text-text-tertiary">
+                                          {coupon.promoCodes[0].code}
+                                        </span>
+                                      ) : (
+                                        <span className="text-text-tertiary">—</span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-right text-text-secondary">
+                                      {coupon.timesRedeemed}
+                                      {coupon.maxRedemptions ? ` / ${coupon.maxRedemptions}` : ""}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          </>
+        )}
+      </section>
     </div>
   );
 }
