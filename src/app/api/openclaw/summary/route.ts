@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { OpenClawActivity } from "@/models/OpenClawActivity";
+import { Lead } from "@/models/Lead";
 
 const TZ = "America/New_York";
 
@@ -48,6 +49,7 @@ export async function GET() {
       leadsContactedToday,
       followUpsToday,
       leadsScrapedToday,
+      leadsAddedToday,
       costThisWeekAgg,
       costThisMonthAgg,
       totalCostAgg,
@@ -64,6 +66,9 @@ export async function GET() {
       }),
       OpenClawActivity.countDocuments({
         type: "lead_scraped",
+        createdAt: { $gte: today },
+      }),
+      Lead.countDocuments({
         createdAt: { $gte: today },
       }),
       OpenClawActivity.aggregate([
@@ -99,6 +104,7 @@ export async function GET() {
       leadsContactedToday,
       followUpsToday,
       leadsScrapedToday,
+      leadsAddedToday,
       costThisWeek,
       costThisMonth,
       costPerLead,

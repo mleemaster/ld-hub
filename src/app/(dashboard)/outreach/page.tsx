@@ -13,12 +13,14 @@ import OutreachStats from "@/components/openclaw/OutreachStats";
 interface OutreachSummary {
   leadsContactedToday: number;
   followUpsToday: number;
+  leadsAddedToday: number;
 }
 
 export default function OutreachPage() {
   const [summary, setSummary] = useState<OutreachSummary>({
     leadsContactedToday: 0,
     followUpsToday: 0,
+    leadsAddedToday: 0,
   });
   const [loaded, setLoaded] = useState(false);
 
@@ -29,6 +31,7 @@ export default function OutreachPage() {
         setSummary({
           leadsContactedToday: data.leadsContactedToday ?? 0,
           followUpsToday: data.followUpsToday ?? 0,
+          leadsAddedToday: data.leadsAddedToday ?? 0,
         });
       })
       .catch(() => {})
@@ -44,7 +47,13 @@ export default function OutreachPage() {
           <h3 className="text-sm font-medium text-text-secondary mb-2">
             Outreach Today
           </h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-3xl font-semibold text-text-primary">
+                {loaded ? summary.leadsAddedToday : "--"}
+              </p>
+              <p className="text-xs text-text-tertiary mt-1">Leads Added</p>
+            </div>
             <div>
               <p className="text-3xl font-semibold text-text-primary">
                 {loaded ? summary.leadsContactedToday : "--"}
