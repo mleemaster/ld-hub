@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Lead } from "@/models/Lead";
+import { Client } from "@/models/Client";
 import { MessageTemplate } from "@/models/MessageTemplate";
 
 const RESPONDED_STATUSES = ["Rejected", "Cold", "Warm", "Call Scheduled", "Closed Won", "Closed Lost"];
@@ -87,7 +88,9 @@ export async function GET() {
     const totalSent = contactedLeads.length;
     const totalResponded = contactedLeads.filter((l) => RESPONDED_STATUSES.includes(l.status as string)).length;
     const totalPositive = contactedLeads.filter((l) => POSITIVE_STATUSES.includes(l.status as string)).length;
-    const totalClosedWon = contactedLeads.filter((l) => l.status === "Closed Won").length;
+    const closedWonLeads = contactedLeads.filter((l) => l.status === "Closed Won").length;
+    const convertedClients = await Client.countDocuments({ leadId: { $exists: true, $ne: null } });
+    const totalClosedWon = closedWonLeads + convertedClients;
 
     // Status breakdown for funnel
     const statusCounts: Record<string, number> = {};
