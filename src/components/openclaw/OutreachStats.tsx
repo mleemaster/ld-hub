@@ -121,8 +121,8 @@ export default function OutreachStats() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           field: TAB_TO_FIELD[activeTab],
-          fromValue: label,
-          toValue: mergeTarget,
+          fromValue: mergeTarget,
+          toValue: label,
         }),
       });
       if (!res.ok) throw new Error();
@@ -258,8 +258,8 @@ export default function OutreachStats() {
                   key={row.label}
                   className={cn(
                     "group flex items-center gap-3 py-1.5 rounded-lg px-1.5 -mx-1.5 transition-colors",
-                    isTarget && "bg-accent/10 ring-1 ring-accent/30",
-                    isSecondClick && "hover:bg-danger/5"
+                    isTarget && "bg-danger/5 ring-1 ring-danger/20 opacity-70",
+                    isSecondClick && "hover:bg-accent/5"
                   )}
                 >
                   <span className="text-sm text-text-primary font-medium w-36 truncate shrink-0" title={row.label}>
@@ -274,17 +274,17 @@ export default function OutreachStats() {
                       className={cn(
                         "shrink-0 p-0.5 rounded transition-all cursor-pointer",
                         isTarget
-                          ? "opacity-100 text-accent"
+                          ? "opacity-100 text-danger"
                           : isSecondClick
-                            ? "opacity-0 group-hover:opacity-100 text-danger hover:bg-danger/10"
+                            ? "opacity-0 group-hover:opacity-100 text-accent hover:bg-accent/10"
                             : "opacity-0 group-hover:opacity-100 text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary"
                       )}
                       title={
                         isTarget
-                          ? "Selected as merge target (click another to merge into this)"
+                          ? `Will merge "${row.label}" into the next one you click`
                           : isSecondClick
-                            ? `Merge "${row.label}" into "${mergeTarget}"`
-                            : `Select "${row.label}" as merge target`
+                            ? `Merge "${mergeTarget}" into "${row.label}"`
+                            : `Merge "${row.label}" into...`
                       }
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
