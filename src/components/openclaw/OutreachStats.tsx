@@ -2,11 +2,14 @@
  * Comprehensive outreach response statistics in a single unified card.
  * Top section: funnel stats + status distribution bar.
  * Bottom section: tabbed response rate breakdown by template, source, state, industry, day of week.
+ * Supports merging duplicate categories (source, state, industry) via hover action + modal.
  */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
+import Modal from "@/components/ui/Modal";
+import Select from "@/components/ui/Select";
 
 interface BreakdownRow {
   label: string;
@@ -46,6 +49,14 @@ const TABS: { key: BreakdownKey; label: string }[] = [
   { key: "byDayOfWeek", label: "Day" },
 ];
 
+const MERGEABLE_TABS = new Set<BreakdownKey>(["bySource", "byState", "byIndustry"]);
+
+const TAB_TO_FIELD: Partial<Record<BreakdownKey, string>> = {
+  bySource: "source",
+  byState: "state",
+  byIndustry: "industry",
+};
+
 const STATUS_COLORS: Record<string, string> = {
   "No Response": "bg-text-tertiary/60",
   "Rejected": "bg-danger/80",
@@ -72,18 +83,106 @@ function fmt(n: number): string {
   return n % 1 === 0 ? `${n}` : n.toFixed(1);
 }
 
+function MergeModal({
+  field,
+  fromLabel,
+  fromCount,
+  options,
+  onClose,
+  onMerged,
+}: {
+  field: string;
+  fromLabel: string;
+  fromCount: number;
+  options: string[];
+  onClose: () => void;
+  onMerged: () => void;
+}) {
+  const [targetValue, setTargetValue] = useState("");
+  const [merging, setMerging] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleMerge() {
+    if (!targetValue) return;
+    setMerging(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/leads/merge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ field, fromValue: fromLabel, toValue: targetValue }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Merge failed");
+      }
+      onMerged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Merge failed");
+      setMerging(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Merge Category">
+      <div className="space-y-4">
+        <p className="text-sm text-text-secondary">
+          Merge <span className="font-medium text-text-primary">&ldquo;{fromLabel}&rdquo;</span> into:
+        </p>
+
+        <Select
+          options={options.map((o) => ({ value: o, label: o }))}
+          value={targetValue}
+          onChange={setTargetValue}
+          placeholder="Select target category..."
+        />
+
+        <p className="text-xs text-text-tertiary">
+          This will update {fromCount} lead{fromCount !== 1 ? "s" : ""}.
+        </p>
+
+        {error && <p className="text-xs text-danger">{error}</p>}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3 py-1.5 text-sm rounded-lg border border-border text-text-secondary hover:bg-surface-secondary transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleMerge}
+            disabled={!targetValue || merging}
+            className="px-3 py-1.5 text-sm rounded-lg bg-accent text-white hover:bg-accent/90 transition-colors disabled:opacity-50 cursor-pointer"
+          >
+            {merging ? "Merging..." : "Merge"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export default function OutreachStats() {
   const [data, setData] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<BreakdownKey>("byTemplate");
+  const [mergeRow, setMergeRow] = useState<BreakdownRow | null>(null);
 
-  useEffect(() => {
+  const refreshStats = useCallback(() => {
+    setLoading(true);
     fetch("/api/openclaw/outreach-stats")
       .then((r) => r.json())
       .then((d) => setData(d))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    refreshStats();
+  }, [refreshStats]);
 
   if (loading) {
     return (
@@ -98,7 +197,7 @@ export default function OutreachStats() {
   const { overview, statusCounts } = data;
   const rows = data[activeTab];
   const orderedStatuses = STATUS_ORDER.filter((s) => statusCounts[s]);
-  const maxSent = Math.max(...rows.map((r) => r.sent), 1);
+  const isMergeable = MERGEABLE_TABS.has(activeTab) && rows.length >= 2;
 
   return (
     <div className="rounded-2xl border border-border bg-surface-secondary">
@@ -189,13 +288,25 @@ export default function OutreachStats() {
         ) : (
           <div className="space-y-1.5">
             {rows.map((row) => (
-              <div key={row.label} className="flex items-center gap-3 py-1.5">
+              <div key={row.label} className="group flex items-center gap-3 py-1.5">
                 <span className="text-sm text-text-primary font-medium w-36 truncate shrink-0" title={row.label}>
                   {row.label}
                 </span>
 
+                {isMergeable && (
+                  <button
+                    type="button"
+                    onClick={() => setMergeRow(row)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 p-0.5 rounded hover:bg-surface-tertiary text-text-tertiary hover:text-text-primary cursor-pointer"
+                    title={`Merge "${row.label}" into another category`}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                    </svg>
+                  </button>
+                )}
+
                 <div className="flex-1 flex items-center gap-2">
-                  {/* Simple single bar showing response rate */}
                   <div className="flex-1 h-1.5 rounded-full bg-surface-tertiary/50 overflow-hidden">
                     <div
                       className="h-full rounded-full bg-accent transition-all"
@@ -216,6 +327,20 @@ export default function OutreachStats() {
           </div>
         )}
       </div>
+
+      {mergeRow && (
+        <MergeModal
+          field={TAB_TO_FIELD[activeTab]!}
+          fromLabel={mergeRow.label}
+          fromCount={mergeRow.sent}
+          options={rows.filter((r) => r.label !== mergeRow.label).map((r) => r.label)}
+          onClose={() => setMergeRow(null)}
+          onMerged={() => {
+            setMergeRow(null);
+            refreshStats();
+          }}
+        />
+      )}
     </div>
   );
 }
