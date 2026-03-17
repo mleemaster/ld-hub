@@ -88,17 +88,17 @@ export default function OutreachStats() {
   const [mergeTarget, setMergeTarget] = useState<string | null>(null);
   const [merging, setMerging] = useState(false);
 
-  const refreshStats = useCallback(() => {
-    setLoading(true);
+  const refreshStats = useCallback((initial = false) => {
+    if (initial) setLoading(true);
     fetch("/api/openclaw/outreach-stats")
       .then((r) => r.json())
       .then((d) => setData(d))
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => { if (initial) setLoading(false); });
   }, []);
 
   useEffect(() => {
-    refreshStats();
+    refreshStats(true);
   }, [refreshStats]);
 
   async function handleMergeClick(label: string) {
