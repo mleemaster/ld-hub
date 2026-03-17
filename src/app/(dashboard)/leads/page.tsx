@@ -41,7 +41,7 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({ status: "", source: "", industry: "" });
+  const [filters, setFilters] = useState({ status: "", source: "", industry: "", state: "" });
   const [activeTab, setActiveTab] = useState<"pipeline" | "queue">("pipeline");
   const [viewMode, setViewMode] = useState<"kanban" | "table">("kanban");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -85,6 +85,7 @@ export default function LeadsPage() {
       if (filters.status) params.set("status", filters.status);
       if (filters.source) params.set("source", filters.source);
       if (filters.industry) params.set("industry", filters.industry);
+      if (filters.state) params.set("state", filters.state);
 
       const res = await fetch(`/api/leads?${params.toString()}`);
       if (res.ok) {
@@ -742,11 +743,16 @@ export default function LeadsPage() {
 
       {/* Filters — pipeline only */}
       {activeTab === "pipeline" && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           <Select
             options={PIPELINE_STATUS_FILTER_OPTIONS}
             value={filters.status}
             onChange={(v) => setFilters((f) => ({ ...f, status: v }))}
+          />
+          <Select
+            options={STATE_FILTER_OPTIONS}
+            value={filters.state}
+            onChange={(v) => setFilters((f) => ({ ...f, state: v }))}
           />
           <Select
             options={sourceFilterOptions}

@@ -21,12 +21,14 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     const source = searchParams.get("source");
     const industry = searchParams.get("industry");
+    const state = searchParams.get("state");
     const unlinked = searchParams.get("unlinked");
 
     const filter: Record<string, unknown> = {};
     if (status) filter.status = status;
     if (source) filter.source = source;
     if (industry) filter.industry = industry;
+    if (state) filter.state = state;
 
     if (unlinked === "true") {
       const linkedLeadIds = await Client.distinct("leadId", { leadId: { $ne: null } });
