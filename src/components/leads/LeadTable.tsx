@@ -19,6 +19,7 @@ import { getStatusBadgeVariant, isNeedingAttention } from "@/lib/lead-utils";
 import type { LeadStatus } from "@/lib/lead-constants";
 import type { Lead } from "@/lib/lead-types";
 import { cn, parseLocalDate } from "@/lib/utils";
+import { nowET } from "@/lib/date-utils";
 
 interface LeadTableProps {
   leads: Lead[];
@@ -67,7 +68,7 @@ function isOverdue(dateStr?: string): boolean {
   if (!dateStr) return false;
   const d = parseLocalDate(dateStr);
   if (!d) return false;
-  const today = new Date();
+  const today = nowET();
   today.setHours(0, 0, 0, 0);
   d.setHours(0, 0, 0, 0);
   return d <= today;

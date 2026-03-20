@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { OpenClawActivity } from "@/models/OpenClawActivity";
+import { toYMD } from "@/lib/date-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,8 +20,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "start and end params required" }, { status: 400 });
     }
 
-    const startDate = new Date(`${start}T00:00:00`);
-    const endDate = new Date(`${end}T23:59:59.999`);
+    const [sy, sm, sd] = start.split("-").map(Number);
+    const [ey, em, ed] = end.split("-").map(Number);
+    const startDate = new Date(sy, sm - 1, sd, 0, 0, 0, 0);
+    const endDate = new Date(ey, em - 1, ed, 23, 59, 59, 999);
 
     const pipeline = [
       {
@@ -53,7 +56,7 @@ export async function GET(request: NextRequest) {
 
     const cursor = new Date(startDate);
     while (cursor <= endDate) {
-      const key = cursor.toISOString().split("T")[0];
+      const key = toYMD(cursor);
       dayMap.set(key, { leadsContacted: 0, followUps: 0 });
       cursor.setDate(cursor.getDate() + 1);
     }

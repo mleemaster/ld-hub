@@ -17,6 +17,7 @@ import {
   Legend,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { nowET, toYMD } from "@/lib/date-utils";
 
 type Period = "last7" | "last14" | "last30" | "thisMonth" | "last3Months";
 
@@ -29,8 +30,7 @@ const PERIOD_OPTIONS: { value: Period; label: string }[] = [
 ];
 
 function getDateRange(period: Period): { start: string; end: string } {
-  const today = new Date();
-  const toYMD = (d: Date) => d.toISOString().split("T")[0];
+  const today = nowET();
   const todayStr = toYMD(today);
 
   switch (period) {

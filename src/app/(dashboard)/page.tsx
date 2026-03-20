@@ -10,6 +10,7 @@ import { Activity } from "@/models/Activity";
 import { OpenClawStatus } from "@/models/OpenClawStatus";
 import { OpenClawActivity } from "@/models/OpenClawActivity";
 import { formatCurrency } from "@/lib/utils";
+import { startOfDayET, endOfDayET } from "@/lib/date-utils";
 import Link from "next/link";
 
 async function getLeadCounts() {
@@ -74,9 +75,8 @@ async function getMrrAndActiveClients() {
 async function getNeedsAttention() {
   try {
     await connectDB();
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const startOfDay = startOfDayET();
+    const endOfDay = endOfDayET();
 
     const [followUpsToday, callsToday] = await Promise.all([
       Lead.countDocuments({
@@ -115,18 +115,17 @@ async function getRecentActivity() {
 async function getOpenClawStats() {
   try {
     await connectDB();
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayStart = startOfDayET();
 
     const [statusDoc, messagesSentToday, leadsScrapedToday] = await Promise.all([
       OpenClawStatus.findOne().lean(),
       OpenClawActivity.countDocuments({
         type: { $in: ["message_sent", "follow_up_sent", "lead_contacted"] },
-        createdAt: { $gte: startOfDay },
+        createdAt: { $gte: todayStart },
       }),
       OpenClawActivity.countDocuments({
         type: "lead_scraped",
-        createdAt: { $gte: startOfDay },
+        createdAt: { $gte: todayStart },
       }),
     ]);
 

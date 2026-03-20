@@ -91,12 +91,14 @@ export async function GET(request: NextRequest) {
       rangeStart = toStartOfDay(parseDate(startParam));
       rangeEnd = toEndOfDay(parseDate(endParam));
     } else if (legacyPeriod) {
-      const refDate = new Date();
+      const etS = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+      const refDate = new Date(etS);
       const r = legacyPeriod === "monthly" ? getMonthRange(refDate) : getWeekRange(refDate);
       rangeStart = r.start;
       rangeEnd = r.end;
     } else {
-      const refDate = new Date();
+      const etS = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+      const refDate = new Date(etS);
       const r = getMonthRange(refDate);
       rangeStart = r.start;
       rangeEnd = r.end;

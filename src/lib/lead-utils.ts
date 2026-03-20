@@ -6,6 +6,7 @@ import type { BadgeVariant } from "@/components/ui/Badge";
 import { LEAD_STATUSES, INDUSTRIES, PIPELINE_STATUSES, US_STATES, STATE_NAME_TO_ABBR } from "@/lib/lead-constants";
 import type { LeadStatus } from "@/lib/lead-constants";
 import { parseLocalDate } from "@/lib/utils";
+import { nowET } from "@/lib/date-utils";
 
 const STATUS_BADGE_MAP: Record<LeadStatus, BadgeVariant> = {
   New: "default",
@@ -45,7 +46,7 @@ interface LeadLike {
 }
 
 export function isNeedingAttention(lead: LeadLike): boolean {
-  const today = new Date();
+  const today = nowET();
   today.setHours(0, 0, 0, 0);
 
   if (lead.followUpDate) {

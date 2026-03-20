@@ -7,22 +7,10 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { OpenClawActivity } from "@/models/OpenClawActivity";
 import { Lead } from "@/models/Lead";
-
-const TZ = "America/New_York";
-
-function nowInET() {
-  const s = new Date().toLocaleString("en-US", { timeZone: TZ });
-  return new Date(s);
-}
-
-function startOfToday(): Date {
-  const et = nowInET();
-  et.setHours(0, 0, 0, 0);
-  return et;
-}
+import { nowET, startOfDayET } from "@/lib/date-utils";
 
 function startOfWeek(): Date {
-  const et = nowInET();
+  const et = nowET();
   const day = et.getDay();
   const diff = day === 0 ? 6 : day - 1;
   et.setDate(et.getDate() - diff);
@@ -31,7 +19,7 @@ function startOfWeek(): Date {
 }
 
 function startOfMonth(): Date {
-  const et = nowInET();
+  const et = nowET();
   et.setDate(1);
   et.setHours(0, 0, 0, 0);
   return et;
@@ -41,7 +29,7 @@ export async function GET() {
   try {
     await connectDB();
 
-    const today = startOfToday();
+    const today = startOfDayET();
     const weekStart = startOfWeek();
     const monthStart = startOfMonth();
 

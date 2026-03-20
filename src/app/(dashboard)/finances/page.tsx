@@ -11,6 +11,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { nowET, toYMD as toYMDet } from "@/lib/date-utils";
 import TimePeriodToggle from "@/components/finances/TimePeriodToggle";
 import TrendLineChart from "@/components/finances/TrendLineChart";
 import PlanBreakdownChart from "@/components/finances/PlanBreakdownChart";
@@ -36,46 +37,38 @@ function formatDelta(value: number): string {
   return `${sign}$${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
-function pad(n: number): string {
-  return n < 10 ? `0${n}` : String(n);
-}
-
-function toYMD(d: Date): string {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
 function getDateRange(
   period: TimePeriod,
   customStart: string,
   customEnd: string
 ): { start: string; end: string } {
-  const today = new Date();
-  const todayStr = toYMD(today);
+  const today = nowET();
+  const todayStr = toYMDet(today);
 
   switch (period) {
     case "last7": {
       const start = new Date(today);
       start.setDate(start.getDate() - 6);
-      return { start: toYMD(start), end: todayStr };
+      return { start: toYMDet(start), end: todayStr };
     }
     case "last30": {
       const start = new Date(today);
       start.setDate(start.getDate() - 29);
-      return { start: toYMD(start), end: todayStr };
+      return { start: toYMDet(start), end: todayStr };
     }
     case "thisMonth": {
       const start = new Date(today.getFullYear(), today.getMonth(), 1);
-      return { start: toYMD(start), end: todayStr };
+      return { start: toYMDet(start), end: todayStr };
     }
     case "ytd": {
       const start = new Date(today.getFullYear(), 0, 1);
-      return { start: toYMD(start), end: todayStr };
+      return { start: toYMDet(start), end: todayStr };
     }
     case "last12Months": {
       const start = new Date(today);
       start.setMonth(start.getMonth() - 12);
       start.setDate(start.getDate() + 1);
-      return { start: toYMD(start), end: todayStr };
+      return { start: toYMDet(start), end: todayStr };
     }
     case "custom":
       return { start: customStart, end: customEnd };
