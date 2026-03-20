@@ -258,7 +258,7 @@ export default function SettingsPage() {
                 {sources.map((source) => (
                   <TableRow key={source.name}>
                     <TableCell>
-                      {editingId === source._id ? (
+                      {editingId !== null && editingId === source._id ? (
                         <div className="flex items-center gap-2">
                           <Input
                             value={editName}
@@ -277,7 +277,7 @@ export default function SettingsPage() {
                       ) : (
                         <span className="font-medium">{source.name}</span>
                       )}
-                      {editingId === source._id && editError && (
+                      {editingId !== null && editingId === source._id && editError && (
                         <p className="text-xs text-danger mt-1">{editError}</p>
                       )}
                     </TableCell>
