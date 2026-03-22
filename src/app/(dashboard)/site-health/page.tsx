@@ -59,9 +59,10 @@ export default function SiteHealthPage() {
   const [incidents, setIncidents] = useState<HealthIncident[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [checking, setChecking] = useState(false);
 
-  useEffect(() => {
-    Promise.all([
+  function fetchData() {
+    return Promise.all([
       fetch("/api/health/status").then((r) => r.json()),
       fetch("/api/health/history?limit=50&status=all").then((r) => r.json()),
     ])
@@ -69,9 +70,24 @@ export default function SiteHealthPage() {
         setData(statusData);
         setIncidents(historyData.incidents || []);
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    fetchData().finally(() => setLoading(false));
   }, []);
+
+  async function handleCheckNow() {
+    setChecking(true);
+    try {
+      await fetch("/api/health/check-now", { method: "POST" });
+      await fetchData();
+    } catch {
+      // silently fail
+    } finally {
+      setChecking(false);
+    }
+  }
 
   const filteredSites = useMemo(() => {
     if (!data) return [];
@@ -93,7 +109,23 @@ export default function SiteHealthPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-text-primary">Site Health</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-text-primary">Site Health</h1>
+        <button
+          onClick={handleCheckNow}
+          disabled={checking}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl bg-accent text-white hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {checking ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Checking...
+            </>
+          ) : (
+            "Check Now"
+          )}
+        </button>
+      </div>
 
       {/* Summary bar */}
       <div className="flex flex-wrap gap-3">
