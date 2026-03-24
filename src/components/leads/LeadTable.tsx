@@ -28,6 +28,7 @@ interface LeadTableProps {
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: (ids: string[]) => void;
+  onFollowUp: (leadId: string) => void;
 }
 
 function SelectAllCheckbox({ leads, selectedIds, onToggleSelectAll }: {
@@ -123,7 +124,7 @@ function EditButton({ onClick }: { onClick: (e: React.MouseEvent) => void }) {
   );
 }
 
-export default function LeadTable({ leads, onRowClick, onEditClick, selectedIds, onToggleSelect, onToggleSelectAll }: LeadTableProps) {
+export default function LeadTable({ leads, onRowClick, onEditClick, selectedIds, onToggleSelect, onToggleSelectAll, onFollowUp }: LeadTableProps) {
   return (
     <>
       {/* Desktop table */}
@@ -154,7 +155,7 @@ export default function LeadTable({ leads, onRowClick, onEditClick, selectedIds,
                   key={lead._id}
                   onClick={() => onRowClick(lead)}
                   className={cn(
-                    "cursor-pointer",
+                    "cursor-pointer group",
                     hot
                       ? "border-l-2 border-l-red-500"
                       : attention && "border-l-2 border-l-warning",
@@ -204,8 +205,17 @@ export default function LeadTable({ leads, onRowClick, onEditClick, selectedIds,
                     </span>
                   </TableCell>
                   <TableCell>
-                    <span className="text-text-secondary">
+                    <span className="flex items-center gap-1.5 text-text-secondary">
                       {formatDate(lead.lastContactedDate)}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onFollowUp(lead._id); }}
+                        title="Mark followed up"
+                        className="opacity-0 group-hover:opacity-100 inline-flex items-center justify-center w-6 h-6 rounded-lg hover:bg-surface-tertiary text-text-tertiary hover:text-green-500 transition-all cursor-pointer"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                        </svg>
+                      </button>
                     </span>
                   </TableCell>
                   <TableCell>
@@ -263,6 +273,15 @@ export default function LeadTable({ leads, onRowClick, onEditClick, selectedIds,
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onFollowUp(lead._id); }}
+                    title="Mark followed up"
+                    className="inline-flex items-center justify-center w-7 h-7 rounded-lg hover:bg-surface-tertiary text-text-tertiary hover:text-green-500 transition-colors cursor-pointer"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                    </svg>
+                  </button>
                   <EditButton onClick={(e) => { e.stopPropagation(); onEditClick(lead); }} />
                   <Badge
                     variant={getStatusBadgeVariant(lead.status as LeadStatus)}

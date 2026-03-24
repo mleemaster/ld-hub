@@ -32,6 +32,7 @@ interface KanbanBoardProps {
   onLeadClick: (lead: Lead) => void;
   onEditClick: (lead: Lead) => void;
   onStatusChange: (leadId: string, newStatus: string) => void;
+  onFollowUp: (leadId: string) => void;
 }
 
 function formatDate(dateStr?: string): string {
@@ -71,10 +72,11 @@ interface KanbanCardProps {
   lead: Lead;
   onClick: () => void;
   onEdit?: () => void;
+  onFollowUp?: () => void;
   isOverlay?: boolean;
 }
 
-function KanbanCard({ lead, onClick, onEdit, isOverlay }: KanbanCardProps) {
+function KanbanCard({ lead, onClick, onEdit, onFollowUp, isOverlay }: KanbanCardProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: lead._id,
   });
@@ -108,17 +110,30 @@ function KanbanCard({ lead, onClick, onEdit, isOverlay }: KanbanCardProps) {
           {hot && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />}
           {lead.name}
         </p>
-        {onEdit && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            title="Edit"
-            className="opacity-0 group-hover:opacity-100 inline-flex items-center justify-center w-6 h-6 rounded-lg hover:bg-surface-tertiary text-text-tertiary hover:text-accent transition-all cursor-pointer shrink-0 ml-1"
-          >
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-            </svg>
-          </button>
-        )}
+        <div className="flex items-center gap-0.5 shrink-0 ml-1">
+          {onFollowUp && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onFollowUp(); }}
+              title="Mark followed up"
+              className="opacity-0 group-hover:opacity-100 inline-flex items-center justify-center w-6 h-6 rounded-lg hover:bg-surface-tertiary text-text-tertiary hover:text-green-500 transition-all cursor-pointer"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+              </svg>
+            </button>
+          )}
+          {onEdit && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit(); }}
+              title="Edit"
+              className="opacity-0 group-hover:opacity-100 inline-flex items-center justify-center w-6 h-6 rounded-lg hover:bg-surface-tertiary text-text-tertiary hover:text-accent transition-all cursor-pointer"
+            >
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
       {lead.businessName && (
         <p className="text-xs text-text-tertiary truncate mt-0.5">{lead.businessName}</p>
@@ -149,9 +164,10 @@ interface KanbanColumnProps {
   leads: Lead[];
   onLeadClick: (lead: Lead) => void;
   onEditClick: (lead: Lead) => void;
+  onFollowUp: (leadId: string) => void;
 }
 
-function KanbanColumn({ status, leads, onLeadClick, onEditClick }: KanbanColumnProps) {
+function KanbanColumn({ status, leads, onLeadClick, onEditClick, onFollowUp }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
 
   return (
@@ -178,6 +194,7 @@ function KanbanColumn({ status, leads, onLeadClick, onEditClick }: KanbanColumnP
               lead={lead}
               onClick={() => onLeadClick(lead)}
               onEdit={() => onEditClick(lead)}
+              onFollowUp={() => onFollowUp(lead._id)}
             />
           ))
         )}
@@ -188,7 +205,7 @@ function KanbanColumn({ status, leads, onLeadClick, onEditClick }: KanbanColumnP
 
 /* ── Board ── */
 
-export default function KanbanBoard({ leads, onLeadClick, onEditClick, onStatusChange }: KanbanBoardProps) {
+export default function KanbanBoard({ leads, onLeadClick, onEditClick, onStatusChange, onFollowUp }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -226,6 +243,7 @@ export default function KanbanBoard({ leads, onLeadClick, onEditClick, onStatusC
             leads={leads.filter((l) => l.status === status)}
             onLeadClick={onLeadClick}
             onEditClick={onEditClick}
+            onFollowUp={onFollowUp}
           />
         ))}
       </div>

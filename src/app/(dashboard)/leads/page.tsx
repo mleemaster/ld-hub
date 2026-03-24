@@ -359,6 +359,32 @@ export default function LeadsPage() {
     }
   }
 
+  async function handleFollowedUp(leadId: string) {
+    const now = new Date().toISOString();
+    const prev = leads.map((l) => ({ ...l }));
+
+    setLeads((current) =>
+      current.map((l) =>
+        l._id === leadId ? { ...l, lastContactedDate: now } : l
+      )
+    );
+
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lastContactedDate: now }),
+      });
+      if (!res.ok) {
+        setLeads(prev);
+      } else {
+        fetchLeads();
+      }
+    } catch {
+      setLeads(prev);
+    }
+  }
+
   async function handleTemplateChange(leadId: string, templateId: string, templateName: string) {
     const prev = leads.map((l) => ({ ...l }));
     setLeads((current) =>
@@ -904,6 +930,7 @@ export default function LeadsPage() {
           onLeadClick={(lead) => { setOpenInEditMode(false); setSelectedLead(lead); }}
           onEditClick={(lead) => { setOpenInEditMode(true); setSelectedLead(lead); }}
           onStatusChange={handleStatusChange}
+          onFollowUp={handleFollowedUp}
         />
       ) : (
         <LeadTable
@@ -913,6 +940,7 @@ export default function LeadsPage() {
           selectedIds={selectedIds}
           onToggleSelect={toggleSelected}
           onToggleSelectAll={toggleSelectAll}
+          onFollowUp={handleFollowedUp}
         />
       )}
 
