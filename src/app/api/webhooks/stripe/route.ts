@@ -324,7 +324,12 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
     return;
   }
 
-  const fields = mapSubscriptionToClientFields(subscription);
+  // Re-retrieve with expanded discounts so we get the actual price
+  const fullSub = await stripe.subscriptions.retrieve(subscription.id, {
+    expand: ["discounts"],
+  });
+
+  const fields = mapSubscriptionToClientFields(fullSub);
   if (!fields) return;
 
   if (fields.kind === "planTier") {

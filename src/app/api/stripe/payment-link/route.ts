@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
 
       const couponParams: Record<string, unknown> = {
         max_redemptions: 1,
+        duration: discount.appliesTo === "setup" ? "once" : "forever",
         name: `${planTier} – ${discount.value}${discount.type === "percent" ? "%" : "$"} off ${discount.appliesTo}`,
         metadata: {
           ...(leadId && { leadId }),

@@ -15,6 +15,7 @@ import {
   getPlanTierFromPriceId,
   isSetupPrice,
   extractStripeFee,
+  applySubscriptionDiscounts,
 } from "@/lib/stripe-utils";
 
 export async function POST(
@@ -56,17 +57,8 @@ export async function POST(
         if (!tier) continue;
 
         // Start with list price, then apply subscription discounts
-        let amount = (item.price.unit_amount ?? 0) / 100;
-        for (const disc of sub.discounts ?? []) {
-          if (typeof disc === "string") continue;
-          const coupon = disc.source?.coupon;
-          if (!coupon || typeof coupon === "string") continue;
-          if (coupon.percent_off) {
-            amount = Math.round(amount * (1 - coupon.percent_off / 100) * 100) / 100;
-          } else if (coupon.amount_off) {
-            amount = Math.max(0, amount - coupon.amount_off / 100);
-          }
-        }
+        const listPrice = (item.price.unit_amount ?? 0) / 100;
+        const amount = applySubscriptionDiscounts(listPrice, sub.discounts as import("stripe").default.Discount[] | undefined);
 
         if (tier === "ppc") {
           if (client.ppcManagementFee !== amount) {

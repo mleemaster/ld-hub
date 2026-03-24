@@ -92,8 +92,30 @@ interface PpcFields {
 export type SubscriptionFields = PlanTierFields | PpcFields;
 
 /**
+ * Apply subscription-level discounts to a base amount.
+ * Expects expanded discount objects (not string IDs).
+ */
+export function applySubscriptionDiscounts(
+  amount: number,
+  discounts: Stripe.Discount[] | undefined
+): number {
+  for (const disc of discounts ?? []) {
+    if (typeof disc === "string") continue;
+    const coupon = disc.source?.coupon;
+    if (!coupon || typeof coupon === "string") continue;
+    if (coupon.percent_off) {
+      amount = Math.round(amount * (1 - coupon.percent_off / 100) * 100) / 100;
+    } else if (coupon.amount_off) {
+      amount = Math.max(0, amount - coupon.amount_off / 100);
+    }
+  }
+  return amount;
+}
+
+/**
  * Convert a Stripe Subscription into Client model field updates.
  * Returns different shapes for plan tier vs PPC subscriptions.
+ * When discounts are expanded on the subscription, applies them to the price.
  */
 export function mapSubscriptionToClientFields(
   sub: Stripe.Subscription
@@ -105,18 +127,21 @@ export function mapSubscriptionToClientFields(
   const tier = getPlanTierFromPriceId(priceId);
   if (!tier) return null;
 
+  const listPrice = (item.price.unit_amount ?? 0) / 100;
+  const amount = applySubscriptionDiscounts(listPrice, sub.discounts as Stripe.Discount[] | undefined);
+
   if (tier === "ppc") {
     return {
       kind: "ppc",
       ppcClient: true,
-      ppcManagementFee: (item.price.unit_amount ?? 0) / 100,
+      ppcManagementFee: amount,
     };
   }
 
   return {
     kind: "planTier",
     planTier: tier,
-    monthlyRevenue: (item.price.unit_amount ?? 0) / 100,
+    monthlyRevenue: amount,
     startDate: new Date(sub.start_date * 1000),
     nextBillingDate: new Date(item.current_period_end * 1000),
   };
