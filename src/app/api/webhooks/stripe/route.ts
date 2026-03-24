@@ -208,11 +208,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     const tier = getPlanTierFromPriceId(priceId);
     if (tier === "ppc") {
       ppcClient = true;
-      ppcManagementFee = (item.price?.unit_amount ?? 0) / 100;
+      ppcManagementFee = (item.amount_total ?? 0) / 100;
     } else if (tier) {
       planTier = tier;
       if (item.price?.recurring) {
-        monthlyRevenue = (item.price?.unit_amount ?? 0) / 100;
+        monthlyRevenue = (item.amount_total ?? 0) / 100;
       }
     }
   }

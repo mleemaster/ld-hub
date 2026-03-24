@@ -45,6 +45,7 @@ export async function POST(
         customer: customerId,
         status: "active",
         limit: 5,
+        expand: ["data.discounts"],
       });
 
       for (const sub of subs.data) {
@@ -54,15 +55,27 @@ export async function POST(
         const tier = getPlanTierFromPriceId(item.price.id);
         if (!tier) continue;
 
+        // Start with list price, then apply subscription discounts
+        let amount = (item.price.unit_amount ?? 0) / 100;
+        for (const disc of sub.discounts ?? []) {
+          if (typeof disc === "string") continue;
+          const coupon = disc.source?.coupon;
+          if (!coupon || typeof coupon === "string") continue;
+          if (coupon.percent_off) {
+            amount = Math.round(amount * (1 - coupon.percent_off / 100) * 100) / 100;
+          } else if (coupon.amount_off) {
+            amount = Math.max(0, amount - coupon.amount_off / 100);
+          }
+        }
+
         if (tier === "ppc") {
-          const fee = (item.price.unit_amount ?? 0) / 100;
-          if (client.ppcManagementFee !== fee) {
+          if (client.ppcManagementFee !== amount) {
             client.ppcClient = true;
-            client.ppcManagementFee = fee;
-            changes.push(`PPC fee → $${fee}`);
+            client.ppcManagementFee = amount;
+            changes.push(`PPC fee → $${amount}`);
           }
         } else {
-          const revenue = (item.price.unit_amount ?? 0) / 100;
+          const revenue = amount;
           const nextBilling = new Date(item.current_period_end * 1000);
 
           if (client.planTier !== tier) {
