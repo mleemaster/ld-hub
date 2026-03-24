@@ -326,7 +326,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 
   // Re-retrieve with expanded discounts so we get the actual price
   const fullSub = await stripe.subscriptions.retrieve(subscription.id, {
-    expand: ["discounts"],
+    expand: ["discounts.source.coupon"],
   });
 
   const fields = mapSubscriptionToClientFields(fullSub);

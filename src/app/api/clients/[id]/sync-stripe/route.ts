@@ -46,7 +46,7 @@ export async function POST(
         customer: customerId,
         status: "active",
         limit: 5,
-        expand: ["data.discounts"],
+        expand: ["data.discounts.source.coupon"],
       });
 
       for (const sub of subs.data) {
