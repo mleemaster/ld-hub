@@ -9,26 +9,30 @@ import type { PlanTier } from "@/lib/client-constants";
 /* ── Price ID → Plan Tier mapping ─────────────────────────── */
 
 interface PriceMapping {
-  planTier: PlanTier | "ppc";
-  type: "subscription" | "setup";
+  planTier?: PlanTier | "ppc";
+  addOnSlug?: string;
+  type: "subscription" | "setup" | "addon";
 }
 
 function buildPriceMap(): Map<string, PriceMapping> {
   const map = new Map<string, PriceMapping>();
 
-  const entries: { env: string; planTier: PlanTier | "ppc"; type: "subscription" | "setup" }[] = [
-    { env: "STRIPE_PRICE_LANDING_PAGE", planTier: "Landing Page", type: "subscription" },
-    { env: "STRIPE_PRICE_LANDING_PAGE_SETUP", planTier: "Landing Page", type: "setup" },
-    { env: "STRIPE_PRICE_MULTI_PAGE", planTier: "Multi-Page", type: "subscription" },
-    { env: "STRIPE_PRICE_MULTI_PAGE_SETUP", planTier: "Multi-Page", type: "setup" },
+  const entries: { env: string; planTier?: PlanTier | "ppc"; addOnSlug?: string; type: "subscription" | "setup" | "addon" }[] = [
+    { env: "STRIPE_PRICE_LANDING_MONTHLY", planTier: "Landing Page", type: "subscription" },
+    { env: "STRIPE_PRICE_LANDING_SETUP", planTier: "Landing Page", type: "setup" },
+    { env: "STRIPE_PRICE_MULTI_MONTHLY", planTier: "Multi-Page", type: "subscription" },
+    { env: "STRIPE_PRICE_MULTI_SETUP", planTier: "Multi-Page", type: "setup" },
+    { env: "STRIPE_PRICE_ADDON_AI_LEAD", addOnSlug: "ai-lead-responder", type: "addon" },
+    { env: "STRIPE_PRICE_ADDON_MISSED_CALL", addOnSlug: "missed-call-text-back", type: "addon" },
+    { env: "STRIPE_PRICE_ADDON_SEO_GROWTH", addOnSlug: "seo-growth-pack", type: "addon" },
     { env: "STRIPE_PRICE_ECOMMERCE", planTier: "eCommerce", type: "subscription" },
     { env: "STRIPE_PRICE_ECOMMERCE_SETUP", planTier: "eCommerce", type: "setup" },
     { env: "STRIPE_PRICE_PPC", planTier: "ppc", type: "subscription" },
   ];
 
-  for (const { env, planTier, type } of entries) {
+  for (const { env, planTier, addOnSlug, type } of entries) {
     const id = process.env[env];
-    if (id) map.set(id, { planTier, type });
+    if (id) map.set(id, { planTier, addOnSlug, type });
   }
 
   return map;
@@ -43,6 +47,16 @@ function priceMap(): Map<string, PriceMapping> {
 /** Look up a Stripe Price ID and return the plan tier (or "ppc" for PPC subscriptions). */
 export function getPlanTierFromPriceId(priceId: string): PlanTier | "ppc" | null {
   return priceMap().get(priceId)?.planTier ?? null;
+}
+
+/** Get the add-on slug for a Stripe Price ID, or null if it's not an add-on. */
+export function getAddOnFromPriceId(priceId: string): string | null {
+  return priceMap().get(priceId)?.addOnSlug ?? null;
+}
+
+/** Check if a Stripe Price ID corresponds to an add-on. */
+export function isAddOnPrice(priceId: string): boolean {
+  return priceMap().get(priceId)?.type === "addon";
 }
 
 /** Reverse lookup: get the subscription Price ID for a given plan tier. */

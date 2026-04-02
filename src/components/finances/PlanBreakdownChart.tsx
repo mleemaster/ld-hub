@@ -16,6 +16,7 @@ const TIER_COLORS: Record<string, string> = {
   "Multi-Page": "#8b5cf6",
   eCommerce: "#f59e0b",
   PPC: "#10b981",
+  "Add-ons": "#ec4899",
 };
 
 function getColor(tier: string): string {

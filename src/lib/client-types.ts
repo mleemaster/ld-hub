@@ -25,6 +25,24 @@ export interface IntakeForm {
   tagline?: string;
 }
 
+export interface ActiveAddOn {
+  name: string;
+  slug: string;
+  monthlyPrice: number;
+  stripeSubscriptionId?: string;
+  activeSince?: string;
+  includedWithPlan?: boolean;
+}
+
+export interface Onboarding {
+  domainPurchased: boolean;
+  designMockupSent: boolean;
+  contentCollected: boolean;
+  revisionsApproved: boolean;
+  siteDeployed: boolean;
+  analyticsInstalled: boolean;
+}
+
 export interface Client {
   _id: string;
   name: string;
@@ -50,6 +68,11 @@ export interface Client {
   intakeForm?: IntakeForm;
   leadId?: string;
   stripeCustomerId?: string;
+  activeAddOns?: ActiveAddOn[];
+  addOnRevenue?: number;
+  convertedFromSource?: string;
+  convertedFromTemplateName?: string;
+  onboarding?: Onboarding;
   createdAt: string;
   updatedAt: string;
 }

@@ -9,6 +9,8 @@ import { connectDB } from "@/lib/db";
 import { Lead } from "@/models/Lead";
 import { Activity } from "@/models/Activity";
 import { OpenClawActivity } from "@/models/OpenClawActivity";
+import { calculateNextFollowUpDate } from "@/lib/followup-constants";
+import type { LeadStatus } from "@/lib/lead-constants";
 
 export async function GET(
   _request: NextRequest,
@@ -49,12 +51,42 @@ export async function PUT(
       }
     }
 
+    // Smart follow-up: handle contact tracking
+    const existingContactDate = existing.lastContactedDate
+      ? existing.lastContactedDate.toISOString().split("T")[0]
+      : null;
+    const newContactDate = body.lastContactedDate
+      ? String(body.lastContactedDate).split("T")[0]
+      : null;
+    const isNewContact = newContactDate && newContactDate !== existingContactDate;
+
+    if (isNewContact) {
+      body.contactAttempts = (existing.contactAttempts || 0) + 1;
+      if (!existing.firstContactedDate) {
+        body.firstContactedDate = new Date();
+      }
+    }
+
+    // Smart follow-up: handle status change
+    const statusChanged = body.status && body.status !== existing.status;
+    if (statusChanged) {
+      body.stageEnteredAt = new Date();
+    }
+
+    // Calculate nextFollowUpDate on contact or status change
+    if (isNewContact || statusChanged) {
+      const effectiveStatus = (body.status || existing.status) as LeadStatus;
+      const effectiveCallDate = body.callScheduledDate || existing.callScheduledDate;
+      const nextFollowUp = calculateNextFollowUpDate(effectiveStatus, effectiveCallDate);
+      body.nextFollowUpDate = nextFollowUp ?? null;
+    }
+
     const lead = await Lead.findByIdAndUpdate(id, body, { new: true });
 
     try {
-      const isFirstContact = body.status && existing.status === "New" && body.status !== "New";
+      const isFirstContact = existing.status === "New" && body.status && body.status !== "New";
 
-      if (body.status && body.status !== existing.status) {
+      if (statusChanged) {
         await Activity.create({
           type: "lead_status_changed",
           description: `${existing.name}: ${existing.status} → ${body.status}`,
@@ -63,14 +95,7 @@ export async function PUT(
         });
       }
 
-      const existingContactDate = existing.lastContactedDate
-        ? existing.lastContactedDate.toISOString().split("T")[0]
-        : null;
-      const newContactDate = body.lastContactedDate
-        ? String(body.lastContactedDate).split("T")[0]
-        : null;
-
-      if (newContactDate && newContactDate !== existingContactDate) {
+      if (isNewContact) {
         const activityType = isFirstContact ? "lead_contacted" : "follow_up_sent";
         await Activity.create({
           type: "lead_contacted",

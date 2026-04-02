@@ -20,16 +20,20 @@ Copy `.env.example` and fill in:
 | `AUTH_SECRET` | NextAuth JWT secret (`openssl rand -base64 32`) |
 | `STRIPE_SECRET_KEY` | Stripe API key |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
-| `STRIPE_PRICE_LANDING_SUB` | Stripe price ID — Landing Page subscription |
-| `STRIPE_PRICE_MULTI_SUB` | Stripe price ID — Multi-Page subscription |
-| `STRIPE_PRICE_ECOM_SUB` | Stripe price ID — eCommerce subscription |
-| `STRIPE_PRICE_PPC_SUB` | Stripe price ID — PPC management subscription |
+| `STRIPE_PRICE_LANDING_MONTHLY` | Stripe price ID — Landing Page subscription |
+| `STRIPE_PRICE_MULTI_MONTHLY` | Stripe price ID — Multi-Page subscription |
 | `STRIPE_PRICE_LANDING_SETUP` | Stripe price ID — Landing Page setup fee |
 | `STRIPE_PRICE_MULTI_SETUP` | Stripe price ID — Multi-Page setup fee |
-| `STRIPE_PRICE_ECOM_SETUP` | Stripe price ID — eCommerce setup fee |
+| `STRIPE_PRICE_ADDON_AI_LEAD` | Stripe price ID — AI Lead Responder add-on |
+| `STRIPE_PRICE_ADDON_MISSED_CALL` | Stripe price ID — Missed Call Text-Back add-on |
+| `STRIPE_PRICE_ADDON_SEO_GROWTH` | Stripe price ID — SEO Growth Pack add-on |
+| `STRIPE_PRICE_ECOMMERCE` | (Optional/legacy) Stripe price ID — eCommerce subscription |
+| `STRIPE_PRICE_ECOMMERCE_SETUP` | (Optional/legacy) Stripe price ID — eCommerce setup fee |
+| `STRIPE_PRICE_PPC` | (Optional/legacy) Stripe price ID — PPC management subscription |
 | `TALLY_WEBHOOK_SECRET` | Tally HMAC signing secret |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob storage token |
 | `OPENCLAW_API_KEY` | Shared secret for OpenClaw agent auth |
+| `LD_HUB_WEBHOOK_KEY` | Shared secret for demo intake webhook from leemasterdesign.com |
 | `CRON_SECRET` | Bearer token for Vercel cron endpoints |
 | `TELEGRAM_BOT_TOKEN` | (Optional) Telegram alert bot token |
 | `TELEGRAM_CHAT_ID` | (Optional) Telegram chat to send alerts to |
@@ -157,7 +161,7 @@ Paying customer management. Clients are created automatically when a lead conver
 | Tier | Monthly | Setup Fee |
 |------|---------|-----------|
 | Landing Page | $99 | $299 |
-| Multi-Page | $199 | $399 |
+| Multi-Page | $179 | $399 |
 | eCommerce | $249 | $499 |
 
 **Project statuses:** Awaiting Design → Awaiting Revision → Awaiting Final Dev → Deployed Active / Deployed Canceled

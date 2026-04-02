@@ -20,7 +20,7 @@ import {
 import { useDroppable } from "@dnd-kit/core";
 import { useDraggable } from "@dnd-kit/core";
 import Badge from "@/components/ui/Badge";
-import { PIPELINE_STATUSES } from "@/lib/lead-constants";
+const KANBAN_STATUSES = ["Rejected", "Cold", "Warm", "Call Scheduled"] as const;
 import { getStatusBadgeVariant, isNeedingAttention } from "@/lib/lead-utils";
 import type { LeadStatus } from "@/lib/lead-constants";
 import type { Lead } from "@/lib/lead-types";
@@ -33,13 +33,6 @@ interface KanbanBoardProps {
   onEditClick: (lead: Lead) => void;
   onStatusChange: (leadId: string, newStatus: string) => void;
   onFollowUp: (leadId: string) => void;
-}
-
-function formatDate(dateStr?: string): string {
-  if (!dateStr) return "";
-  const d = parseLocalDate(dateStr);
-  if (!d) return "";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function formatDateTime(dateStr?: string): string {
@@ -64,6 +57,33 @@ function isOverdue(dateStr?: string): boolean {
   today.setHours(0, 0, 0, 0);
   d.setHours(0, 0, 0, 0);
   return d <= today;
+}
+
+function getDaysInStage(stageEnteredAt?: string): number | null {
+  if (!stageEnteredAt) return null;
+  const d = parseLocalDate(stageEnteredAt);
+  if (!d) return null;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+
+function getDaysInStageColor(days: number): string {
+  if (days <= 3) return "text-green-500 bg-green-500/10";
+  if (days <= 7) return "text-yellow-500 bg-yellow-500/10";
+  if (days <= 14) return "text-orange-500 bg-orange-500/10";
+  return "text-red-500 bg-red-500/10";
+}
+
+function getFollowUpStatus(nextFollowUpDate?: string): { label: string; color: string } | null {
+  if (!nextFollowUpDate) return null;
+  const d = parseLocalDate(nextFollowUpDate);
+  if (!d) return null;
+  const today = nowET();
+  today.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  const diffDays = Math.floor((d.getTime() - today.getTime()) / 86400000);
+  if (diffDays < 0) return { label: `Overdue ${Math.abs(diffDays)}d`, color: "text-red-500" };
+  if (diffDays === 0) return { label: "Due today", color: "text-orange-500" };
+  return { label: `Follow-up in ${diffDays}d`, color: "text-text-tertiary" };
 }
 
 /* ── Card ── */
@@ -139,7 +159,18 @@ function KanbanCard({ lead, onClick, onEdit, onFollowUp, isOverlay }: KanbanCard
         <p className="text-xs text-text-tertiary truncate mt-0.5">{lead.businessName}</p>
       )}
       <div className="flex items-center justify-between mt-2 text-xs text-text-tertiary">
-        <span>{lead.source}</span>
+        <div className="flex items-center gap-1.5">
+          <span>{lead.source}</span>
+          {(() => {
+            const days = getDaysInStage(lead.stageEnteredAt);
+            if (days === null) return null;
+            return (
+              <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-medium", getDaysInStageColor(days))}>
+                {days}d
+              </span>
+            );
+          })()}
+        </div>
         {lead.status === "Call Scheduled" && lead.callScheduledDate ? (
           <span className={cn("flex items-center gap-1", isOverdue(lead.callScheduledDate) && "text-warning font-medium")}>
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -147,12 +178,17 @@ function KanbanCard({ lead, onClick, onEdit, onFollowUp, isOverlay }: KanbanCard
             </svg>
             {formatDateTime(lead.callScheduledDate)}
           </span>
-        ) : lead.followUpDate ? (
-          <span className={cn(isOverdue(lead.followUpDate) && "text-warning font-medium")}>
-            {formatDate(lead.followUpDate)}
-          </span>
         ) : null}
       </div>
+      {(() => {
+        const followUp = getFollowUpStatus(lead.nextFollowUpDate);
+        if (!followUp) return null;
+        return (
+          <p className={cn("text-[10px] font-medium mt-1", followUp.color)}>
+            {followUp.label}
+          </p>
+        );
+      })()}
     </div>
   );
 }
@@ -236,7 +272,7 @@ export default function KanbanBoard({ leads, onLeadClick, onEditClick, onStatusC
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory md:snap-none">
-        {PIPELINE_STATUSES.map((status) => (
+        {KANBAN_STATUSES.map((status) => (
           <KanbanColumn
             key={status}
             status={status}

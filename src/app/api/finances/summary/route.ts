@@ -34,6 +34,9 @@ function getClientMrr(client: IClient): number {
   if (client.ppcClient && client.ppcManagementFee) {
     mrr += client.ppcManagementFee;
   }
+  if (client.addOnRevenue) {
+    mrr += client.addOnRevenue;
+  }
   return mrr;
 }
 
@@ -147,6 +150,17 @@ export async function GET(request: NextRequest) {
         ppc.count++;
         ppc.revenue += client.ppcManagementFee;
         planMap.set("PPC", ppc);
+      }
+
+      if (client.addOnRevenue && client.addOnRevenue > 0) {
+        const addOns = planMap.get("Add-ons") || {
+          tier: "Add-ons",
+          count: 0,
+          revenue: 0,
+        };
+        addOns.count++;
+        addOns.revenue += client.addOnRevenue;
+        planMap.set("Add-ons", addOns);
       }
     }
     const planBreakdown = Array.from(planMap.values());

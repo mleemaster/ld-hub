@@ -120,6 +120,109 @@ function IntakeFormSection({ intakeForm }: { intakeForm: IntakeForm }) {
   );
 }
 
+const ONBOARDING_ITEMS: { key: string; label: string }[] = [
+  { key: "domainPurchased", label: "Domain purchased" },
+  { key: "designMockupSent", label: "Design mockup sent" },
+  { key: "contentCollected", label: "Content collected" },
+  { key: "revisionsApproved", label: "Revisions approved" },
+  { key: "siteDeployed", label: "Site deployed" },
+  { key: "analyticsInstalled", label: "Analytics installed" },
+];
+
+function OnboardingChecklist({
+  clientId,
+  onboarding,
+  projectStatus,
+  onUpdate,
+}: {
+  clientId: string;
+  onboarding: NonNullable<Client["onboarding"]>;
+  projectStatus: string;
+  onUpdate: () => void;
+}) {
+  const [state, setState] = useState(onboarding);
+  const isDeployed = projectStatus === "Deployed Active";
+  const [collapsed, setCollapsed] = useState(isDeployed);
+
+  const completed = ONBOARDING_ITEMS.filter(
+    (item) => state[item.key as keyof typeof state]
+  ).length;
+  const total = ONBOARDING_ITEMS.length;
+  const progressPct = Math.round((completed / total) * 100);
+
+  async function toggleItem(key: string) {
+    const newValue = !state[key as keyof typeof state];
+    const newState = { ...state, [key]: newValue };
+    setState(newState);
+
+    try {
+      await fetch(`/api/clients/${clientId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ onboarding: newState }),
+      });
+      onUpdate();
+    } catch {
+      setState(state);
+    }
+  }
+
+  return (
+    <div className="border border-border rounded-xl overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setCollapsed(!collapsed)}
+        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
+      >
+        <span>Onboarding ({completed}/{total})</span>
+        <div className="flex items-center gap-2">
+          <div className="w-20 h-1.5 bg-border rounded-full overflow-hidden">
+            <div
+              className="h-full bg-accent rounded-full transition-all"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+          <svg
+            className={`w-4 h-4 text-text-tertiary transition-transform ${collapsed ? "" : "rotate-180"}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+          </svg>
+        </div>
+      </button>
+      {!collapsed && (
+        <div className="px-4 pb-4 pt-1 border-t border-border space-y-2">
+          {ONBOARDING_ITEMS.map((item) => (
+            <label
+              key={item.key}
+              className="flex items-center gap-3 py-1 cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                checked={state[item.key as keyof typeof state]}
+                onChange={() => toggleItem(item.key)}
+                className="w-4 h-4 rounded border-border text-accent cursor-pointer"
+              />
+              <span
+                className={`text-sm ${
+                  state[item.key as keyof typeof state]
+                    ? "text-text-tertiary line-through"
+                    : "text-text-primary"
+                }`}
+              >
+                {item.label}
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ClientDetailPanel({
   client,
   onStatusChange,
@@ -431,6 +534,63 @@ export default function ClientDetailPanel({
           <dd className="text-sm text-text-primary mt-0.5">{formatDate(client.updatedAt)}</dd>
         </div>
       </div>
+
+      {/* Total Monthly Value */}
+      {(() => {
+        const total =
+          (client.monthlyRevenue || 0) +
+          (client.ppcClient && client.ppcManagementFee ? client.ppcManagementFee : 0) +
+          (client.addOnRevenue || 0);
+        if (total <= 0) return null;
+        return (
+          <div className="rounded-xl bg-accent/5 border border-accent/20 px-4 py-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-text-tertiary uppercase tracking-wider">
+                Total Monthly Value
+              </span>
+              <span className="text-lg font-semibold text-accent">
+                {formatCurrency(total)}
+              </span>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Active Add-ons */}
+      {client.activeAddOns && client.activeAddOns.length > 0 && (
+        <div>
+          <h3 className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-2">
+            Active Add-ons
+          </h3>
+          <div className="space-y-2">
+            {client.activeAddOns.map((addon) => (
+              <div
+                key={addon.slug}
+                className="flex items-center justify-between rounded-lg border border-border bg-surface-secondary px-3 py-2"
+              >
+                <span className="text-sm text-text-primary">{addon.name}</span>
+                {addon.includedWithPlan ? (
+                  <Badge variant="success">Included</Badge>
+                ) : (
+                  <span className="text-sm font-medium text-text-primary">
+                    {formatCurrency(addon.monthlyPrice)}/mo
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding Checklist */}
+      {client.onboarding && (
+        <OnboardingChecklist
+          clientId={client._id}
+          onboarding={client.onboarding}
+          projectStatus={client.projectStatus}
+          onUpdate={fetchActivities}
+        />
+      )}
 
       {/* Sync from Stripe */}
       {isStripeManaged && onSyncStripe && (

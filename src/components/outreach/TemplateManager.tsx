@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Button from "@/components/ui/Button";
-import TemplateForm from "@/components/openclaw/TemplateForm";
+import TemplateForm from "@/components/outreach/TemplateForm";
 
 interface Template {
   _id: string;

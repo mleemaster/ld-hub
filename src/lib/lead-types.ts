@@ -4,6 +4,16 @@
  */
 import type { IntakeForm } from "@/lib/client-types";
 
+export interface AnalysisData {
+  metro?: string;
+  monthlySearches?: number;
+  estimatedCompetitors?: number;
+  avgJobValue?: number;
+  revenueLow?: number;
+  revenueHigh?: number;
+  analyzedAt?: string;
+}
+
 export interface Lead {
   _id: string;
   name: string;
@@ -13,6 +23,8 @@ export interface Lead {
   website?: string;
   status: string;
   source: string;
+  sourceDetail?: string;
+  city?: string;
   callScheduledDate?: string;
   followUpDate?: string;
   industry?: string;
@@ -23,6 +35,11 @@ export interface Lead {
   outreachTemplateId?: string;
   outreachTemplateName?: string;
   intakeForm?: IntakeForm;
+  analysisData?: AnalysisData;
+  contactAttempts?: number;
+  firstContactedDate?: string;
+  stageEnteredAt?: string;
+  nextFollowUpDate?: string;
   createdAt: string;
   updatedAt: string;
 }

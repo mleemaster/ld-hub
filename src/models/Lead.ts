@@ -15,6 +15,16 @@ import { IntakeFormSchema, type IIntakeForm } from "@/models/IntakeFormSchema";
 export { LEAD_STATUSES, LEAD_SOURCES, INDUSTRIES };
 export type { LeadStatus, LeadSource, Industry } from "@/lib/lead-constants";
 
+export interface IAnalysisData {
+  metro?: string;
+  monthlySearches?: number;
+  estimatedCompetitors?: number;
+  avgJobValue?: number;
+  revenueLow?: number;
+  revenueHigh?: number;
+  analyzedAt?: Date;
+}
+
 export interface ILead extends Document {
   name: string;
   businessName?: string;
@@ -25,6 +35,8 @@ export interface ILead extends Document {
   callScheduledDate?: Date;
   followUpDate?: Date;
   source: (typeof LEAD_SOURCES)[number];
+  sourceDetail?: string;
+  city?: string;
   industry?: string;
   state?: string;
   notes?: string;
@@ -33,6 +45,11 @@ export interface ILead extends Document {
   outreachTemplateId?: string;
   outreachTemplateName?: string;
   intakeForm?: IIntakeForm;
+  analysisData?: IAnalysisData;
+  contactAttempts: number;
+  firstContactedDate?: Date;
+  stageEnteredAt?: Date;
+  nextFollowUpDate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,6 +70,8 @@ const LeadSchema = new Schema<ILead>(
     callScheduledDate: Date,
     followUpDate: Date,
     source: { type: String, required: true },
+    sourceDetail: String,
+    city: String,
     industry: String,
     state: String,
     notes: String,
@@ -61,6 +80,19 @@ const LeadSchema = new Schema<ILead>(
     outreachTemplateId: String,
     outreachTemplateName: String,
     intakeForm: IntakeFormSchema,
+    analysisData: {
+      metro: String,
+      monthlySearches: Number,
+      estimatedCompetitors: Number,
+      avgJobValue: Number,
+      revenueLow: Number,
+      revenueHigh: Number,
+      analyzedAt: Date,
+    },
+    contactAttempts: { type: Number, default: 0 },
+    firstContactedDate: Date,
+    stageEnteredAt: Date,
+    nextFollowUpDate: Date,
   },
   { timestamps: true }
 );

@@ -8,6 +8,8 @@ import { connectDB } from "@/lib/db";
 import { Lead } from "@/models/Lead";
 import { Client } from "@/models/Client";
 import { Activity } from "@/models/Activity";
+import { calculateNextFollowUpDate } from "@/lib/followup-constants";
+import type { LeadStatus } from "@/lib/lead-constants";
 
 function normalizePhone(raw: string): string {
   const digits = raw.replace(/\D/g, "");
@@ -24,8 +26,24 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get("state");
     const unlinked = searchParams.get("unlinked");
 
+    const excludeStatus = searchParams.get("excludeStatus");
+
     const filter: Record<string, unknown> = {};
-    if (status) filter.status = status;
+    if (status) {
+      if (status.includes(",")) {
+        filter.status = { $in: status.split(",") };
+      } else {
+        filter.status = status;
+      }
+    }
+    if (excludeStatus) {
+      const existing = filter.status as Record<string, unknown> | string | undefined;
+      if (existing && typeof existing === "object" && "$in" in existing) {
+        filter.status = { $in: (existing.$in as string[]).filter((s) => s !== excludeStatus) };
+      } else if (!existing) {
+        filter.status = { $ne: excludeStatus };
+      }
+    }
     if (source) filter.source = source;
     if (industry) filter.industry = industry;
     if (state) filter.state = state;
@@ -96,6 +114,18 @@ export async function PATCH(request: NextRequest) {
         { _id: { $in: ids }, followUpDate: { $gte: new Date(`${contactDate}T00:00:00`), $lt: new Date(`${contactDate}T23:59:59.999`) } },
         { $unset: { followUpDate: "" } }
       );
+
+      // Smart follow-up: increment contactAttempts, set firstContactedDate, calculate nextFollowUpDate
+      const leadsToUpdate = await Lead.find({ _id: { $in: ids } });
+      for (const lead of leadsToUpdate) {
+        lead.contactAttempts = (lead.contactAttempts || 0) + 1;
+        if (!lead.firstContactedDate) {
+          lead.firstContactedDate = new Date();
+        }
+        const nextFollowUp = calculateNextFollowUpDate(lead.status as LeadStatus, lead.callScheduledDate);
+        lead.nextFollowUpDate = nextFollowUp ?? undefined;
+        await lead.save();
+      }
     }
 
     try {

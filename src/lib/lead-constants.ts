@@ -34,14 +34,25 @@ export const LEAD_SOURCES = [
 ] as const;
 
 export const INDUSTRIES = [
-  "Landscaping",
   "Plumbing",
-  "HVAC",
-  "Excavation",
   "Electrical",
+  "HVAC",
+  "Landscaping",
+  "Excavation",
   "Roofing",
   "Painting",
+  "Concrete",
+  "Fencing",
+  "Flooring",
+  "Remodeling",
+  "Pool",
+  "Pest Control",
   "Cleaning",
+  "Pressure Washing",
+  "Tree Service",
+  "Garage Doors",
+  "Handyman",
+  "Towing",
   "General Contractor",
   "Other",
 ] as const;

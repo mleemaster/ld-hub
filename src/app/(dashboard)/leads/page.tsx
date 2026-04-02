@@ -73,6 +73,7 @@ export default function LeadsPage() {
   const [queueStateFilter, setQueueStateFilter] = useState("");
   const [queueSourceFilter, setQueueSourceFilter] = useState("");
   const [queueIndustryFilter, setQueueIndustryFilter] = useState("");
+  const [showNoResponse, setShowNoResponse] = useState(false);
   const [showDuplicatesModal, setShowDuplicatesModal] = useState(false);
   const [duplicatesLoading, setDuplicatesLoading] = useState(false);
   const [duplicateGroups, setDuplicateGroups] = useState<
@@ -86,6 +87,9 @@ export default function LeadsPage() {
       if (filters.source) params.set("source", filters.source);
       if (filters.industry) params.set("industry", filters.industry);
       if (filters.state) params.set("state", filters.state);
+      if (!showNoResponse && !filters.status) {
+        params.set("excludeStatus", "No Response");
+      }
 
       const res = await fetch(`/api/leads?${params.toString()}`);
       if (res.ok) {
@@ -102,7 +106,7 @@ export default function LeadsPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, showNoResponse]);
 
   useEffect(() => {
     setLoading(true);
@@ -726,6 +730,18 @@ export default function LeadsPage() {
             </div>
           )}
 
+          {activeTab === "pipeline" && (
+            <label className="flex items-center gap-2 text-xs text-text-secondary cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showNoResponse}
+                onChange={() => setShowNoResponse((v) => !v)}
+                className="w-3.5 h-3.5 rounded border-border text-accent cursor-pointer"
+              />
+              No Response
+            </label>
+          )}
+
           <div ref={toolsRef} className="relative">
             <button
               onClick={() => setShowToolsMenu((v) => !v)}
@@ -902,7 +918,13 @@ export default function LeadsPage() {
         <OutreachQueue
           leads={queueLeads}
           onLeadClick={(lead) => { setOpenInEditMode(false); setSelectedLead(lead); }}
-          onMarkContacted={(lead) => setMarkingContactedLead(lead)}
+          onMarkContacted={(lead, templateId, templateName) => {
+            if (templateId) {
+              handleMarkContacted(lead._id, templateId, templateName);
+            } else {
+              setMarkingContactedLead(lead);
+            }
+          }}
           onSendMessage={(lead) => setMessagingLead(lead)}
           selectedIds={selectedIds}
           onToggleSelect={toggleSelected}

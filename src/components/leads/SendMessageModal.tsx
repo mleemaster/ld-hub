@@ -37,13 +37,53 @@ const PLACEHOLDER_MAP: Record<string, keyof Lead> = {
   "{email}": "email",
   "{phone}": "phone",
   "{website}": "website",
+  "{city}": "city",
 };
 
-function fillTemplate(content: string, lead: Lead): string {
+const INDUSTRY_SLUG_MAP: Record<string, string> = {
+  "Plumbing": "plumbing",
+  "Electrical": "electrical",
+  "HVAC": "hvac",
+  "Landscaping": "landscaping",
+  "Excavation": "excavation",
+  "Roofing": "roofing",
+  "Painting": "painting",
+  "Concrete": "concrete",
+  "Fencing": "fencing",
+  "Flooring": "flooring",
+  "Remodeling": "remodeling",
+  "Pool": "pool",
+  "Pest Control": "pest-control",
+  "Cleaning": "cleaning",
+  "Pressure Washing": "pressure-washing",
+  "Tree Service": "tree-service",
+  "Garage Doors": "garage-doors",
+  "Handyman": "handyman",
+  "Towing": "towing",
+};
+
+function getPreviewUrl(industry?: string): string {
+  if (!industry) return "https://leemasterdesign.com/industries";
+  const slug = INDUSTRY_SLUG_MAP[industry];
+  return slug
+    ? `https://leemasterdesign.com/preview/${slug}`
+    : "https://leemasterdesign.com/industries";
+}
+
+function getRevenueGap(lead: Lead): string {
+  if (!lead.analysisData?.revenueLow || !lead.analysisData?.revenueHigh) return "";
+  const fmt = (n: number) =>
+    "$" + n.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  return `${fmt(lead.analysisData.revenueLow)}\u2013${fmt(lead.analysisData.revenueHigh)}/mo`;
+}
+
+export function fillTemplate(content: string, lead: Lead): string {
   let filled = content;
   for (const [placeholder, field] of Object.entries(PLACEHOLDER_MAP)) {
     filled = filled.replaceAll(placeholder, (lead[field] as string) || "");
   }
+  filled = filled.replaceAll("{preview_url}", getPreviewUrl(lead.industry));
+  filled = filled.replaceAll("{revenue_gap}", getRevenueGap(lead));
   return filled;
 }
 

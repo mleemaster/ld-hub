@@ -89,6 +89,8 @@ export async function handleIncident(params: {
   description: string;
   businessName: string;
   websiteUrl: string;
+  checkType?: string;
+  statusCode?: number;
 }) {
   await connectDB();
 
@@ -110,9 +112,17 @@ export async function handleIncident(params: {
 
   if (shouldAlert(incident)) {
     const emoji = params.type.includes("expired") || params.type === "down" ? "🔴" : "🟡";
+    const durationMs = Date.now() - new Date(incident.startedAt).getTime();
+    const durationMins = Math.floor(durationMs / 60000);
+    const durationStr = durationMins < 60
+      ? `${durationMins}m`
+      : `${Math.floor(durationMins / 60)}h ${durationMins % 60}m`;
+    const checkLabel = params.checkType ? ` [${params.checkType}]` : "";
+    const statusLabel = params.statusCode ? ` (HTTP ${params.statusCode})` : "";
     const message =
-      `${emoji} <b>${params.businessName}</b>\n` +
-      `${params.description}\n` +
+      `${emoji} <b>${params.businessName}</b>${checkLabel}\n` +
+      `${params.description}${statusLabel}\n` +
+      `Duration: ${durationStr}\n` +
       `<a href="${params.websiteUrl}">${params.websiteUrl}</a>`;
 
     await sendTelegramAlert(message);

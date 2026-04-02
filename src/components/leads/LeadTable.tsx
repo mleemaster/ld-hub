@@ -80,6 +80,33 @@ function truncate(str: string, len: number): string {
   return str.slice(0, len).trimEnd() + "...";
 }
 
+function getDaysInStage(stageEnteredAt?: string): number | null {
+  if (!stageEnteredAt) return null;
+  const d = parseLocalDate(stageEnteredAt);
+  if (!d) return null;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+
+function getDaysInStageColor(days: number): string {
+  if (days <= 3) return "text-green-500 bg-green-500/10";
+  if (days <= 7) return "text-yellow-500 bg-yellow-500/10";
+  if (days <= 14) return "text-orange-500 bg-orange-500/10";
+  return "text-red-500 bg-red-500/10";
+}
+
+function getFollowUpStatus(nextFollowUpDate?: string): { label: string; color: string } | null {
+  if (!nextFollowUpDate) return null;
+  const d = parseLocalDate(nextFollowUpDate);
+  if (!d) return null;
+  const today = nowET();
+  today.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  const diffDays = Math.floor((d.getTime() - today.getTime()) / 86400000);
+  if (diffDays < 0) return { label: `Overdue ${Math.abs(diffDays)}d`, color: "text-red-500" };
+  if (diffDays === 0) return { label: "Due today", color: "text-orange-500" };
+  return { label: `In ${diffDays}d`, color: "text-text-tertiary" };
+}
+
 function PhoneActions({ phone }: { phone?: string }) {
   if (!phone) return <span className="text-text-secondary">—</span>;
 
@@ -195,14 +222,37 @@ export default function LeadTable({ leads, onRowClick, onEditClick, selectedIds,
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <span
-                      className={cn(
-                        "text-text-secondary",
-                        isOverdue(lead.followUpDate) && "text-warning font-medium"
-                      )}
-                    >
-                      {formatDate(lead.followUpDate)}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {(() => {
+                        const followUp = getFollowUpStatus(lead.nextFollowUpDate);
+                        if (followUp) {
+                          return (
+                            <span className={cn("text-xs font-medium", followUp.color)}>
+                              {followUp.label}
+                            </span>
+                          );
+                        }
+                        return (
+                          <span
+                            className={cn(
+                              "text-text-secondary",
+                              isOverdue(lead.followUpDate) && "text-warning font-medium"
+                            )}
+                          >
+                            {formatDate(lead.followUpDate)}
+                          </span>
+                        );
+                      })()}
+                      {(() => {
+                        const days = getDaysInStage(lead.stageEnteredAt);
+                        if (days === null) return null;
+                        return (
+                          <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-medium", getDaysInStageColor(days))}>
+                            {days}d
+                          </span>
+                        );
+                      })()}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <span className="flex items-center gap-1.5 text-text-secondary">

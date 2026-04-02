@@ -10,6 +10,24 @@ import { IntakeFormSchema, type IIntakeForm } from "@/models/IntakeFormSchema";
 export type { PlanTier, ProjectStatus, IIntakeForm };
 export { PLAN_TIERS, PROJECT_STATUSES };
 
+export interface IActiveAddOn {
+  name: string;
+  slug: string;
+  monthlyPrice: number;
+  stripeSubscriptionId?: string;
+  activeSince?: Date;
+  includedWithPlan?: boolean;
+}
+
+export interface IOnboarding {
+  domainPurchased: boolean;
+  designMockupSent: boolean;
+  contentCollected: boolean;
+  revisionsApproved: boolean;
+  siteDeployed: boolean;
+  analyticsInstalled: boolean;
+}
+
 export interface IClient extends Document {
   name: string;
   businessName: string;
@@ -35,6 +53,11 @@ export interface IClient extends Document {
   lastHealthCheck?: Date;
   leadId?: Types.ObjectId;
   stripeCustomerId?: string;
+  activeAddOns?: IActiveAddOn[];
+  addOnRevenue?: number;
+  convertedFromSource?: string;
+  convertedFromTemplateName?: string;
+  onboarding?: IOnboarding;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -70,6 +93,25 @@ const ClientSchema = new Schema<IClient>(
     lastHealthCheck: Date,
     leadId: { type: Schema.Types.ObjectId, ref: "Lead" },
     stripeCustomerId: String,
+    activeAddOns: [{
+      name: String,
+      slug: String,
+      monthlyPrice: Number,
+      stripeSubscriptionId: String,
+      activeSince: Date,
+      includedWithPlan: Boolean,
+    }],
+    addOnRevenue: Number,
+    convertedFromSource: String,
+    convertedFromTemplateName: String,
+    onboarding: {
+      domainPurchased: { type: Boolean, default: false },
+      designMockupSent: { type: Boolean, default: false },
+      contentCollected: { type: Boolean, default: false },
+      revisionsApproved: { type: Boolean, default: false },
+      siteDeployed: { type: Boolean, default: false },
+      analyticsInstalled: { type: Boolean, default: false },
+    },
   },
   { timestamps: true }
 );

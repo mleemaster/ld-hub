@@ -21,9 +21,12 @@ import { Payment } from "@/models/Payment";
 import {
   getPlanTierFromPriceId,
   isSetupPrice,
+  isAddOnPrice,
+  getAddOnFromPriceId,
   extractStripeFee,
   mapSubscriptionToClientFields,
 } from "@/lib/stripe-utils";
+import { ADD_ONS } from "@/lib/client-constants";
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -189,12 +192,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
   }
 
-  // Determine plan tier and PPC from line items
+  // Determine plan tier, PPC, and add-ons from line items
   let planTier: string = "Landing Page";
   let ppcClient = false;
   let ppcManagementFee: number | undefined;
   let monthlyRevenue: number | undefined;
   let setupFeeAmount: number | undefined;
+  const checkoutAddOns: { name: string; slug: string; monthlyPrice: number; stripeSubscriptionId?: string; activeSince: Date; includedWithPlan: boolean }[] = [];
 
   for (const item of fullSession.line_items?.data ?? []) {
     const priceId = item.price?.id;
@@ -202,6 +206,23 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
     if (isSetupPrice(priceId)) {
       setupFeeAmount = (item.amount_total ?? 0) / 100;
+      continue;
+    }
+
+    if (isAddOnPrice(priceId)) {
+      const slug = getAddOnFromPriceId(priceId);
+      if (slug) {
+        const addOnDef = ADD_ONS.find((a) => a.slug === slug);
+        if (addOnDef) {
+          checkoutAddOns.push({
+            name: addOnDef.name,
+            slug: addOnDef.slug,
+            monthlyPrice: (item.amount_total ?? 0) / 100,
+            activeSince: new Date(),
+            includedWithPlan: false,
+          });
+        }
+      }
       continue;
     }
 
@@ -216,6 +237,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       }
     }
   }
+
+  // If Multi-Page plan and missed-call-text-back add-on, mark as included
+  if (planTier === "Multi-Page") {
+    for (const addOn of checkoutAddOns) {
+      if (addOn.slug === "missed-call-text-back") {
+        addOn.includedWithPlan = true;
+        addOn.monthlyPrice = 0;
+      }
+    }
+  }
+
+  const addOnRevenue = checkoutAddOns.reduce((sum, a) => sum + a.monthlyPrice, 0);
 
   // 1. If a client already has this stripeCustomerId, skip (already linked)
   const existingByStripe = await Client.findOne({ stripeCustomerId: customerId });
@@ -246,6 +279,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     if (nextBillingDate) existingByEmail.nextBillingDate = nextBillingDate;
     if (!existingByEmail.intakeForm && lead?.intakeForm) {
       existingByEmail.intakeForm = lead.intakeForm;
+    }
+    if (checkoutAddOns.length > 0) {
+      existingByEmail.activeAddOns = checkoutAddOns;
+      existingByEmail.addOnRevenue = addOnRevenue;
+    }
+    if (lead) {
+      existingByEmail.convertedFromSource = lead.source;
+      existingByEmail.convertedFromTemplateName = lead.outreachTemplateName;
     }
     await existingByEmail.save();
     await backfillPayments(customerId, existingByEmail._id, existingByEmail.name);
@@ -288,6 +329,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     nextBillingDate: nextBillingDate || undefined,
     leadId: lead?._id || undefined,
     intakeForm: lead?.intakeForm || undefined,
+    activeAddOns: checkoutAddOns.length > 0 ? checkoutAddOns : undefined,
+    addOnRevenue: addOnRevenue > 0 ? addOnRevenue : undefined,
+    convertedFromSource: lead?.source || undefined,
+    convertedFromTemplateName: lead?.outreachTemplateName || undefined,
   };
 
   const client = await Client.create(clientData);
@@ -328,6 +373,52 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   const fullSub = await stripe.subscriptions.retrieve(subscription.id, {
     expand: ["discounts.source.coupon"],
   });
+
+  // Check if this is an add-on subscription
+  const subItem = fullSub.items.data[0];
+  if (subItem && isAddOnPrice(subItem.price.id)) {
+    const slug = getAddOnFromPriceId(subItem.price.id);
+    if (slug) {
+      const addOnDef = ADD_ONS.find((a) => a.slug === slug);
+      if (addOnDef) {
+        const addOns = client.activeAddOns || [];
+        const existing = addOns.findIndex((a) => a.slug === slug);
+        const isIncluded = client.planTier === "Multi-Page" && slug === "missed-call-text-back";
+        const price = isIncluded ? 0 : (subItem.price.unit_amount ?? 0) / 100;
+
+        const addOnEntry = {
+          name: addOnDef.name,
+          slug: addOnDef.slug,
+          monthlyPrice: price,
+          stripeSubscriptionId: fullSub.id,
+          activeSince: new Date(),
+          includedWithPlan: isIncluded,
+        };
+
+        if (existing >= 0) {
+          addOns[existing] = addOnEntry;
+        } else {
+          addOns.push(addOnEntry);
+        }
+
+        client.activeAddOns = addOns;
+        client.addOnRevenue = addOns.reduce((sum, a) => sum + a.monthlyPrice, 0);
+        await client.save();
+
+        try {
+          await Activity.create({
+            type: "payment_received",
+            description: `${addOnDef.name} add-on activated for ${client.name}`,
+            relatedEntityType: "client",
+            relatedEntityId: client._id,
+          });
+        } catch {
+          // Activity logging should never block
+        }
+        return;
+      }
+    }
+  }
 
   const fields = mapSubscriptionToClientFields(fullSub);
   if (!fields) return;
@@ -473,8 +564,32 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     return;
   }
 
-  // Check which subscription was deleted (plan or PPC)
+  // Check which subscription was deleted (add-on, plan, or PPC)
   const item = subscription.items.data[0];
+
+  // Handle add-on cancellation
+  if (item && isAddOnPrice(item.price.id)) {
+    const slug = getAddOnFromPriceId(item.price.id);
+    if (slug && client.activeAddOns) {
+      client.activeAddOns = client.activeAddOns.filter((a) => a.slug !== slug);
+      client.addOnRevenue = client.activeAddOns.reduce((sum, a) => sum + a.monthlyPrice, 0);
+      await client.save();
+
+      const addOnDef = ADD_ONS.find((a) => a.slug === slug);
+      try {
+        await Activity.create({
+          type: "client_status_changed",
+          description: `${addOnDef?.name || slug} add-on canceled for ${client.name}`,
+          relatedEntityType: "client",
+          relatedEntityId: client._id,
+        });
+      } catch {
+        // Activity logging should never block
+      }
+      return;
+    }
+  }
+
   const tier = item ? getPlanTierFromPriceId(item.price.id) : null;
 
   if (tier === "ppc") {

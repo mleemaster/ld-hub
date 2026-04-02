@@ -1,19 +1,83 @@
 /*
- * Outreach page — daily outreach stats, trend chart, message templates, and activity feed.
- * Fetches summary data from /api/openclaw/summary for the Outreach Today card.
+ * Outreach page — daily outreach stats, trend chart, source performance,
+ * message templates, and activity feed.
  */
 "use client";
 
 import { useState, useEffect } from "react";
-import ActivityFeed from "@/components/openclaw/ActivityFeed";
-import TemplateManager from "@/components/openclaw/TemplateManager";
-import OutreachTrendChart from "@/components/openclaw/OutreachTrendChart";
-import OutreachStats from "@/components/openclaw/OutreachStats";
+import ActivityFeed from "@/components/outreach/ActivityFeed";
+import TemplateManager from "@/components/outreach/TemplateManager";
+import OutreachTrendChart from "@/components/outreach/OutreachTrendChart";
+import OutreachStats from "@/components/outreach/OutreachStats";
 
 interface OutreachSummary {
   leadsContactedToday: number;
   followUpsToday: number;
   leadsAddedToday: number;
+}
+
+interface SourceStat {
+  source: string;
+  total: number;
+  contacted: number;
+  replied: number;
+  conversionRate: string;
+}
+
+function SourcePerformance() {
+  const [data, setData] = useState<SourceStat[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/leads/source-performance")
+      .then((r) => r.json())
+      .then((d) => setData(d))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-border bg-surface-secondary p-6">
+        <h3 className="text-sm font-medium text-text-secondary mb-4">Source Performance</h3>
+        <div className="flex justify-center py-6">
+          <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (data.length === 0) return null;
+
+  return (
+    <div className="rounded-2xl border border-border bg-surface-secondary p-6">
+      <h3 className="text-sm font-medium text-text-secondary mb-4">Source Performance</h3>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border text-left">
+              <th className="pb-2 text-xs font-medium text-text-tertiary uppercase tracking-wider">Source</th>
+              <th className="pb-2 text-xs font-medium text-text-tertiary uppercase tracking-wider text-right">Leads</th>
+              <th className="pb-2 text-xs font-medium text-text-tertiary uppercase tracking-wider text-right">Contacted</th>
+              <th className="pb-2 text-xs font-medium text-text-tertiary uppercase tracking-wider text-right">Replied</th>
+              <th className="pb-2 text-xs font-medium text-text-tertiary uppercase tracking-wider text-right">Conv. Rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row) => (
+              <tr key={row.source} className="border-b border-border-secondary">
+                <td className="py-2 text-text-primary font-medium">{row.source}</td>
+                <td className="py-2 text-text-secondary text-right">{row.total}</td>
+                <td className="py-2 text-text-secondary text-right">{row.contacted}</td>
+                <td className="py-2 text-text-secondary text-right">{row.replied}</td>
+                <td className="py-2 text-text-secondary text-right">{row.conversionRate}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
 
 export default function OutreachPage() {
@@ -73,6 +137,8 @@ export default function OutreachPage() {
           <OutreachTrendChart />
         </div>
       </div>
+
+      <SourcePerformance />
 
       <OutreachStats />
 

@@ -1,5 +1,7 @@
 # LeeMaster Design Hub — Full Specification
 
+> **Note:** This is the original spec document and may be out of date. See `ONBOARDING.md` for current architecture, environment variables, and pricing.
+
 ## Overview
 
 A private web application (PWA) that serves as the central hub for LeeMaster Design's business operations. Built on Next.js + MongoDB + Vercel. This is a single-user internal tool (Morgan's business dashboard) — password-protected, not public-facing.
@@ -201,7 +203,7 @@ The money picture. Pulls primarily from Stripe with some manual expense input.
 - **MRR** — total monthly recurring revenue with trend graph (line chart over time)
 - **Plan Breakdown** — pie chart showing % of revenue from each of the 4 plans:
   - Landing Page ($99/mo)
-  - Multi-Page ($199/mo)
+  - Multi-Page ($179/mo)
   - eCommerce ($249/mo)
   - PPC Management ($599/mo)
 - **Setup Fees Collected** — one-time income, tracked separately
@@ -262,7 +264,7 @@ The money picture. Pulls primarily from Stripe with some manual expense input.
 | Plan | Monthly | Setup Fee |
 |---|---|---|
 | Landing Page | $99/mo | $299 |
-| Multi-Page | $199/mo | $399 |
+| Multi-Page | $179/mo | $399 |
 | eCommerce | $249/mo | $499 |
 | PPC Management | $599/mo | — |
 
