@@ -37,11 +37,12 @@ export async function GET(request: NextRequest) {
       }
     }
     if (excludeStatus) {
+      const excludeList = excludeStatus.includes(",") ? excludeStatus.split(",") : [excludeStatus];
       const existing = filter.status as Record<string, unknown> | string | undefined;
       if (existing && typeof existing === "object" && "$in" in existing) {
-        filter.status = { $in: (existing.$in as string[]).filter((s) => s !== excludeStatus) };
+        filter.status = { $in: (existing.$in as string[]).filter((s) => !excludeList.includes(s)) };
       } else if (!existing) {
-        filter.status = { $ne: excludeStatus };
+        filter.status = { $nin: excludeList };
       }
     }
     if (source) filter.source = source;

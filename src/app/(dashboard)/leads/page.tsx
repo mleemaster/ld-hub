@@ -42,7 +42,7 @@ export default function LeadsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({ status: "", source: "", industry: "", state: "" });
-  const [activeTab, setActiveTab] = useState<"pipeline" | "queue">("pipeline");
+  const [activeTab, setActiveTab] = useState<"pipeline" | "queue" | "closed">("pipeline");
   const [viewMode, setViewMode] = useState<"kanban" | "table">("kanban");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -73,7 +73,7 @@ export default function LeadsPage() {
   const [queueStateFilter, setQueueStateFilter] = useState("");
   const [queueSourceFilter, setQueueSourceFilter] = useState("");
   const [queueIndustryFilter, setQueueIndustryFilter] = useState("");
-  const [showNoResponse, setShowNoResponse] = useState(false);
+  const [showAllNoResponse, setShowAllNoResponse] = useState(false);
   const [showDuplicatesModal, setShowDuplicatesModal] = useState(false);
   const [duplicatesLoading, setDuplicatesLoading] = useState(false);
   const [duplicateGroups, setDuplicateGroups] = useState<
@@ -87,10 +87,6 @@ export default function LeadsPage() {
       if (filters.source) params.set("source", filters.source);
       if (filters.industry) params.set("industry", filters.industry);
       if (filters.state) params.set("state", filters.state);
-      if (!showNoResponse && !filters.status) {
-        params.set("excludeStatus", "No Response");
-      }
-
       const res = await fetch(`/api/leads?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
@@ -106,7 +102,7 @@ export default function LeadsPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters, showNoResponse]);
+  }, [filters]);
 
   useEffect(() => {
     setLoading(true);
@@ -168,8 +164,23 @@ export default function LeadsPage() {
     .filter((l) => !queueIndustryFilter || l.industry === queueIndustryFilter)
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
+  const closedStatuses = new Set(["Closed Won", "Closed Lost"]);
+  const fourteenDaysAgo = Date.now() - 14 * 86400000;
+
+  function isRecentNoResponse(lead: { status: string; lastContactedDate?: string; updatedAt: string }) {
+    if (lead.status !== "No Response") return false;
+    if (showAllNoResponse) return true;
+    const contactedTime = lead.lastContactedDate ? new Date(lead.lastContactedDate).getTime() : 0;
+    const updatedTime = new Date(lead.updatedAt).getTime();
+    return Math.max(contactedTime, updatedTime) >= fourteenDaysAgo;
+  }
+
   const pipelineLeads = [...allFiltered]
-    .filter((l) => l.status !== "New")
+    .filter((l) => {
+      if (l.status === "New" || closedStatuses.has(l.status)) return false;
+      if (l.status === "No Response") return isRecentNoResponse(l);
+      return true;
+    })
     .sort((a, b) => {
       const aHot = a.isHot ? 1 : 0;
       const bHot = b.isHot ? 1 : 0;
@@ -182,9 +193,25 @@ export default function LeadsPage() {
       return bDate - aDate;
     });
 
+  const closedLeads = [...allFiltered]
+    .filter((l) => closedStatuses.has(l.status))
+    .sort((a, b) => {
+      const aDate = a.stageEnteredAt ? new Date(a.stageEnteredAt).getTime() : 0;
+      const bDate = b.stageEnteredAt ? new Date(b.stageEnteredAt).getTime() : 0;
+      return bDate - aDate;
+    });
+
   // Counts from unfiltered data for tab badges
   const totalQueue = leads.filter((l) => l.status === "New").length;
-  const totalPipeline = leads.filter((l) => l.status !== "New").length;
+  const allNoResponse = leads.filter((l) => l.status === "No Response");
+  const recentNoResponseCount = allNoResponse.filter((l) => isRecentNoResponse(l)).length;
+  const totalNoResponse = allNoResponse.length;
+  const totalPipeline = leads.filter((l) => {
+    if (l.status === "New" || closedStatuses.has(l.status)) return false;
+    if (l.status === "No Response") return isRecentNoResponse(l);
+    return true;
+  }).length;
+  const totalClosed = leads.filter((l) => closedStatuses.has(l.status)).length;
 
   async function handleAddLead(data: LeadFormData) {
     setSubmitting(true);
@@ -646,7 +673,7 @@ export default function LeadsPage() {
     fetchLeads();
   }
 
-  const currentLeads = activeTab === "queue" ? queueLeads : pipelineLeads;
+  const currentLeads = activeTab === "queue" ? queueLeads : activeTab === "closed" ? closedLeads : pipelineLeads;
 
   return (
     <div className="space-y-6">
@@ -700,6 +727,28 @@ export default function LeadsPage() {
                 </Badge>
               )}
             </button>
+            <button
+              onClick={() => setActiveTab("closed")}
+              className={cn(
+                "px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer flex items-center gap-1.5",
+                activeTab === "closed"
+                  ? "bg-accent text-white"
+                  : "text-text-secondary hover:text-text-primary"
+              )}
+            >
+              Closed
+              {!loading && (
+                <Badge
+                  variant="neutral"
+                  className={cn(
+                    "text-[10px] px-1.5 py-0",
+                    activeTab === "closed" && "bg-white/20 text-white"
+                  )}
+                >
+                  {totalClosed}
+                </Badge>
+              )}
+            </button>
           </div>
 
           {/* Board/List toggle — pipeline only */}
@@ -731,14 +780,15 @@ export default function LeadsPage() {
           )}
 
           {activeTab === "pipeline" && (
-            <label className="flex items-center gap-2 text-xs text-text-secondary cursor-pointer select-none">
+            <label className="flex items-center gap-2 text-xs text-text-secondary cursor-pointer select-none" title={`${recentNoResponseCount} of ${totalNoResponse} No Response leads shown (14-day filter)`}>
               <input
                 type="checkbox"
-                checked={showNoResponse}
-                onChange={() => setShowNoResponse((v) => !v)}
+                checked={showAllNoResponse}
+                onChange={() => setShowAllNoResponse((v) => !v)}
                 className="w-3.5 h-3.5 rounded border-border text-accent cursor-pointer"
               />
-              No Response
+              Show all No Response
+              <span className="text-text-tertiary">({recentNoResponseCount}/{totalNoResponse})</span>
             </label>
           )}
 
@@ -931,6 +981,25 @@ export default function LeadsPage() {
           onToggleSelectAll={toggleSelectAll}
           filtersActive={!!search || !!queueStateFilter}
         />
+      ) : activeTab === "closed" ? (
+        closedLeads.length === 0 ? (
+          <div className="rounded-2xl border border-border bg-surface-secondary overflow-hidden">
+            <div className="p-12 text-center">
+              <p className="text-text-tertiary text-sm">No closed leads yet</p>
+              <p className="text-text-tertiary text-xs mt-1">Leads marked as Closed Won or Closed Lost will appear here</p>
+            </div>
+          </div>
+        ) : (
+          <LeadTable
+            leads={closedLeads}
+            onRowClick={(lead) => { setOpenInEditMode(false); setSelectedLead(lead); }}
+            onEditClick={(lead) => { setOpenInEditMode(true); setSelectedLead(lead); }}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelected}
+            onToggleSelectAll={toggleSelectAll}
+            onFollowUp={handleFollowedUp}
+          />
+        )
       ) : currentLeads.length === 0 ? (
         <div className="rounded-2xl border border-border bg-surface-secondary overflow-hidden">
           <div className="p-12 text-center">

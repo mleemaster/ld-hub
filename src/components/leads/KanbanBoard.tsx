@@ -20,7 +20,7 @@ import {
 import { useDroppable } from "@dnd-kit/core";
 import { useDraggable } from "@dnd-kit/core";
 import Badge from "@/components/ui/Badge";
-const KANBAN_STATUSES = ["Rejected", "Cold", "Warm", "Call Scheduled"] as const;
+const KANBAN_STATUSES = ["No Response", "Rejected", "Cold", "Warm", "Call Scheduled"] as const;
 import { getStatusBadgeVariant, isNeedingAttention } from "@/lib/lead-utils";
 import type { LeadStatus } from "@/lib/lead-constants";
 import type { Lead } from "@/lib/lead-types";
@@ -96,6 +96,13 @@ interface KanbanCardProps {
   isOverlay?: boolean;
 }
 
+function getContactedDaysAgo(lastContactedDate?: string): number | null {
+  if (!lastContactedDate) return null;
+  const d = parseLocalDate(lastContactedDate);
+  if (!d) return null;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+
 function KanbanCard({ lead, onClick, onEdit, onFollowUp, isOverlay }: KanbanCardProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: lead._id,
@@ -103,6 +110,7 @@ function KanbanCard({ lead, onClick, onEdit, onFollowUp, isOverlay }: KanbanCard
 
   const attention = isNeedingAttention(lead);
   const hot = !!lead.isHot;
+  const isNoResponse = lead.status === "No Response";
 
   return (
     <div
@@ -118,11 +126,13 @@ function KanbanCard({ lead, onClick, onEdit, onFollowUp, isOverlay }: KanbanCard
         "group rounded-xl border bg-surface p-3 cursor-grab active:cursor-grabbing transition-opacity select-none",
         isDragging && !isOverlay && "opacity-50",
         isOverlay && "shadow-lg ring-2 ring-accent/30",
-        hot
-          ? "border-red-500/60"
-          : attention
-            ? "border-l-2 border-l-warning border-border"
-            : "border-border"
+        isNoResponse
+          ? "opacity-80 border-l-2 border-l-gray-400 border-border"
+          : hot
+            ? "border-red-500/60"
+            : attention
+              ? "border-l-2 border-l-warning border-border"
+              : "border-border"
       )}
     >
       <div className="flex items-center justify-between">
@@ -186,6 +196,15 @@ function KanbanCard({ lead, onClick, onEdit, onFollowUp, isOverlay }: KanbanCard
         return (
           <p className={cn("text-[10px] font-medium mt-1", followUp.color)}>
             {followUp.label}
+          </p>
+        );
+      })()}
+      {isNoResponse && (() => {
+        const daysAgo = getContactedDaysAgo(lead.lastContactedDate);
+        if (daysAgo === null) return null;
+        return (
+          <p className="text-[10px] text-text-tertiary mt-1">
+            Contacted {daysAgo === 0 ? "today" : `${daysAgo}d ago`}
           </p>
         );
       })()}

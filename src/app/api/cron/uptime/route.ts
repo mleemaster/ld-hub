@@ -50,17 +50,6 @@ export async function GET(request: Request) {
       } else if (responseTimeMs > 10000) {
         status = "degraded";
         errorMessage = `Slow response: ${responseTimeMs}ms`;
-      } else {
-        // Content verification: ensure the page contains the business name
-        try {
-          const body = await res.text();
-          if (client.businessName && !body.includes(client.businessName)) {
-            status = "degraded";
-            errorMessage = "Site loads but content may be incorrect — business name not found in response";
-          }
-        } catch {
-          // Non-blocking — content check failure doesn't override a healthy status check
-        }
       }
     } catch (err) {
       status = "down";

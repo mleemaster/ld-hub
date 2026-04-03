@@ -328,6 +328,16 @@ export default function OutreachQueue({ leads, onLeadClick, onMarkContacted, onS
                   <span className="flex items-center gap-2">
                     <Button
                       size="sm"
+                      variant="secondary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMarkContacted(lead);
+                      }}
+                    >
+                      Mark Contacted
+                    </Button>
+                    <Button
+                      size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleToggleExpand(lead._id);
@@ -403,6 +413,16 @@ export default function OutreachQueue({ leads, onLeadClick, onMarkContacted, onS
                   </div>
                 </div>
                 <span className="flex items-center gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMarkContacted(lead);
+                    }}
+                  >
+                    Mark Contacted
+                  </Button>
                   <Button
                     size="sm"
                     onClick={(e) => {
